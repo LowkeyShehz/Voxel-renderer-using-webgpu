@@ -109,6 +109,7 @@ function cpuMeshGeneration(voxelData) {
 // === WEBGPU COMPUTE MESHING ===
 let cachedDevice = null;
 let cachedPipeline = null;
+let cachedStagingBuffer = null;
 
 async function gpuMeshGeneration(voxelData) {
   const start = performance.now();
@@ -307,11 +308,18 @@ async function gpuMeshGeneration(voxelData) {
 
   // Read back vertices
   // We need to read back the full aligned size (8 floats per vertex)
-  const vertexReadBuffer = device.createBuffer({
-    size: maxVertices * floatsPerVertex * 4,
-    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-  });
-  commandEncoder.copyBufferToBuffer(vertexBuffer, 0, vertexReadBuffer, 0, maxVertices * floatsPerVertex * 4);
+  const requiredSize = maxVertices * floatsPerVertex * 4;
+
+  if (!cachedStagingBuffer || cachedStagingBuffer.size < requiredSize) {
+    if (cachedStagingBuffer) cachedStagingBuffer.destroy();
+    cachedStagingBuffer = device.createBuffer({
+      size: requiredSize,
+      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+    });
+  }
+
+  const vertexReadBuffer = cachedStagingBuffer;
+  commandEncoder.copyBufferToBuffer(vertexBuffer, 0, vertexReadBuffer, 0, requiredSize);
 
   device.queue.submit([commandEncoder.finish()]);
 
