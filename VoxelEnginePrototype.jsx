@@ -17,14 +17,12 @@ function generateVoxelData() {
     const y = Math.floor(i / CHUNK_SIZE) % CHUNK_SIZE;
     const z = Math.floor(i / (CHUNK_SIZE * CHUNK_SIZE));
 
-    // Create a hollow sphere pattern
-    const dx = x - CHUNK_SIZE / 2;
-    const dy = y - CHUNK_SIZE / 2;
-    const dz = z - CHUNK_SIZE / 2;
-    const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    // Create a complex noise pattern (High Density)
+    // This creates "caves" and "mountains" - extremely high surface area
+    const scale = 0.15;
+    const noise = Math.sin(x * scale) + Math.sin(y * scale) + Math.sin(z * scale);
 
-    // Scale sphere with chunk size (approx 1/3 of chunk size)
-    if (dist < CHUNK_SIZE * 0.4 && dist > CHUNK_SIZE * 0.25) {
+    if (noise > 0) {
       data[i] = 1; // Solid voxel
     }
   }
@@ -582,7 +580,7 @@ export default function VoxelEnginePrototype() {
         )}
 
         <div style={{ marginTop: '15px', fontSize: '12px', opacity: 0.7 }}>
-          {CHUNK_SIZE}×{CHUNK_SIZE}×{CHUNK_SIZE} voxel chunk (hollow sphere pattern)
+          {CHUNK_SIZE}×{CHUNK_SIZE}×{CHUNK_SIZE} voxel chunk (Complex Terrain)
         </div>
       </div>
     </div>
