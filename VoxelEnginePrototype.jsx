@@ -6,7 +6,7 @@ import * as THREE from 'three';
  * Validates: GPU compute can generate voxel geometry faster than CPU
  */
 
-const CHUNK_SIZE = 32;
+const CHUNK_SIZE = 64;
 const VOXEL_COUNT = CHUNK_SIZE ** 3;
 
 // === VOXEL DATA GENERATOR ===
@@ -23,7 +23,8 @@ function generateVoxelData() {
     const dz = z - CHUNK_SIZE / 2;
     const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
-    if (dist < 12 && dist > 8) {
+    // Scale sphere with chunk size (approx 1/3 of chunk size)
+    if (dist < CHUNK_SIZE * 0.4 && dist > CHUNK_SIZE * 0.25) {
       data[i] = 1; // Solid voxel
     }
   }
@@ -107,6 +108,7 @@ function cpuMeshGeneration(voxelData) {
 
 // === WEBGPU COMPUTE MESHING ===
 let cachedDevice = null;
+let cachedPipeline = null;
 
 async function gpuMeshGeneration(voxelData) {
   const start = performance.now();
@@ -153,9 +155,12 @@ async function gpuMeshGeneration(voxelData) {
   // Initialize counter to 0
   device.queue.writeBuffer(counterBuffer, 0, new Uint32Array([0]));
 
-  // Compute shader
-  const shaderCode = `
-    struct Voxel {
+  // Get or create compute pipeline
+  let pipeline = cachedPipeline;
+  if (!pipeline) {
+    // Compute shader
+    const shaderCode = `
+      struct Voxel {
       data: array<u32>
     }
     
@@ -260,15 +265,17 @@ async function gpuMeshGeneration(voxelData) {
     }
   `;
 
-  const shaderModule = device.createShaderModule({ code: shaderCode });
+    const shaderModule = device.createShaderModule({ code: shaderCode });
 
-  const pipeline = device.createComputePipeline({
-    layout: 'auto',
-    compute: {
-      module: shaderModule,
-      entryPoint: 'main',
-    },
-  });
+    pipeline = device.createComputePipeline({
+      layout: 'auto',
+      compute: {
+        module: shaderModule,
+        entryPoint: 'main',
+      },
+    });
+    cachedPipeline = pipeline;
+  }
 
   const bindGroup = device.createBindGroup({
     layout: pipeline.getBindGroupLayout(0),
@@ -373,7 +380,7 @@ export default function VoxelEnginePrototype() {
     scene.background = new THREE.Color(0x1a1a2e);
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(40, 40, 40);
+    camera.position.set(CHUNK_SIZE * 1.5, CHUNK_SIZE * 1.5, CHUNK_SIZE * 1.5);
     camera.lookAt(CHUNK_SIZE / 2, CHUNK_SIZE / 2, CHUNK_SIZE / 2);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -396,8 +403,9 @@ export default function VoxelEnginePrototype() {
     let frameId;
     const animate = () => {
       frameId = requestAnimationFrame(animate);
-      camera.position.x = Math.cos(Date.now() * 0.0001) * 50 + CHUNK_SIZE / 2;
-      camera.position.z = Math.sin(Date.now() * 0.0001) * 50 + CHUNK_SIZE / 2;
+      const radius = CHUNK_SIZE * 1.5;
+      camera.position.x = Math.cos(Date.now() * 0.0001) * radius + CHUNK_SIZE / 2;
+      camera.position.z = Math.sin(Date.now() * 0.0001) * radius + CHUNK_SIZE / 2;
       camera.lookAt(CHUNK_SIZE / 2, CHUNK_SIZE / 2, CHUNK_SIZE / 2);
       renderer.render(scene, camera);
     };
@@ -556,7 +564,7 @@ export default function VoxelEnginePrototype() {
         )}
 
         <div style={{ marginTop: '15px', fontSize: '12px', opacity: 0.7 }}>
-          32×32×32 voxel chunk (hollow sphere pattern)
+          {CHUNK_SIZE}×{CHUNK_SIZE}×{CHUNK_SIZE} voxel chunk (hollow sphere pattern)
         </div>
       </div>
     </div>
