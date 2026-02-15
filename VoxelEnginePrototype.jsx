@@ -6,7 +6,7 @@ import * as THREE from 'three';
  * Validates: GPU compute can generate voxel geometry faster than CPU
  */
 
-const CHUNK_SIZE = 64;
+const CHUNK_SIZE = 48;
 const VOXEL_COUNT = CHUNK_SIZE ** 3;
 
 // === VOXEL DATA GENERATOR ===
@@ -305,7 +305,6 @@ async function gpuMeshGeneration(voxelData) {
   });
   commandEncoder.copyBufferToBuffer(counterBuffer, 0, counterReadBuffer, 0, 4);
 
-  // Read back vertices
   // Read back vertices
   // We need to read back the full aligned size (8 floats per vertex)
   const vertexReadBuffer = device.createBuffer({
