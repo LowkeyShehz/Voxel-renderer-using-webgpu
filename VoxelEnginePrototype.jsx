@@ -6,7 +6,7 @@ import * as THREE from 'three';
  * Validates: GPU compute can generate voxel geometry faster than CPU
  */
 
-const CHUNK_SIZE = 48;
+const CHUNK_SIZE = 96;
 const VOXEL_COUNT = CHUNK_SIZE ** 3;
 
 // === VOXEL DATA GENERATOR ===
@@ -139,7 +139,8 @@ async function gpuMeshGeneration(voxelData) {
 
   // Output buffer (vertex data: position + normal = 8 floats per vertex due to alignment)
   // WGSL struct Vertex { position: vec3f, normal: vec3f } aligns to 32 bytes (8 floats)
-  const maxVertices = VOXEL_COUNT * 6 * 6; // 6 faces * 6 vertices per face
+  // Clamp to 3.5M vertices (~112MB) to fit within default 128MB storage buffer limit
+  const maxVertices = Math.min(VOXEL_COUNT * 6 * 6, 3500000);
   const floatsPerVertex = 8; // vec3(3) + pad(1) + vec3(3) + pad(1)
   const vertexBuffer = device.createBuffer({
     size: maxVertices * floatsPerVertex * 4, // 8 floats * 4 bytes
@@ -181,6 +182,7 @@ async function gpuMeshGeneration(voxelData) {
     @group(0) @binding(2) var<storage, read_write> counter: Counter;
     
     const CHUNK_SIZE: u32 = ${CHUNK_SIZE}u;
+    const LIMIT: u32 = 3500000u;
     
     fn getVoxel(x: i32, y: i32, z: i32) -> u32 {
       if (x < 0 || x >= i32(CHUNK_SIZE) || y < 0 || y >= i32(CHUNK_SIZE) || z < 0 || z >= i32(CHUNK_SIZE)) {
@@ -192,6 +194,10 @@ async function gpuMeshGeneration(voxelData) {
     
     fn emitFace(x: f32, y: f32, z: f32, normal: vec3f, corners: array<vec3f, 4>) {
       let baseIdx = atomicAdd(&counter.value, 6u);
+      
+      if (baseIdx + 6u >= LIMIT) {
+        return;
+      }
       
       // Emit 2 triangles (6 vertices) for the quad
       // Triangle 1: 0, 1, 2
@@ -580,7 +586,7 @@ export default function VoxelEnginePrototype() {
         )}
 
         <div style={{ marginTop: '15px', fontSize: '12px', opacity: 0.7 }}>
-          {CHUNK_SIZE}×{CHUNK_SIZE}×{CHUNK_SIZE} voxel chunk (Complex Terrain)
+          {CHUNK_SIZE}×{CHUNK_SIZE}×{CHUNK_SIZE} voxel chunk (Complex Terrain, 884k voxels)
         </div>
       </div>
     </div>
