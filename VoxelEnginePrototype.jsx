@@ -300,30 +300,17 @@ async function gpuMeshGeneration(voxelData) {
   passEncoder.end();
 
   // Read back counter
+  // Read back counter
   const counterReadBuffer = device.createBuffer({
     size: 4,
     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
   });
   commandEncoder.copyBufferToBuffer(counterBuffer, 0, counterReadBuffer, 0, 4);
 
-  // Read back vertices
-  // We need to read back the full aligned size (8 floats per vertex)
-  const requiredSize = maxVertices * floatsPerVertex * 4;
-
-  if (!cachedStagingBuffer || cachedStagingBuffer.size < requiredSize) {
-    if (cachedStagingBuffer) cachedStagingBuffer.destroy();
-    cachedStagingBuffer = device.createBuffer({
-      size: requiredSize,
-      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-    });
-  }
-
-  const vertexReadBuffer = cachedStagingBuffer;
-  commandEncoder.copyBufferToBuffer(vertexBuffer, 0, vertexReadBuffer, 0, requiredSize);
-
+  // Submit first pass (Compute + Counter Read)
   device.queue.submit([commandEncoder.finish()]);
 
-  // Map and read results
+  // Map and read counter
   await counterReadBuffer.mapAsync(GPUMapMode.READ);
   const counterData = new Uint32Array(counterReadBuffer.getMappedRange());
   const vertexCount = counterData[0];
@@ -335,10 +322,34 @@ async function gpuMeshGeneration(voxelData) {
     throw new Error('GPU compute shader produced 0 vertices. Check voxel data.');
   }
 
-  await vertexReadBuffer.mapAsync(GPUMapMode.READ);
-  const vertexData = new Float32Array(vertexReadBuffer.getMappedRange(), 0, vertexCount * floatsPerVertex);
+  // Read back vertices (2nd pass - only read what we need)
+  // We need to read back the full aligned size (8 floats per vertex)
+  const byteSize = vertexCount * floatsPerVertex * 4;
+  const maxByteSize = maxVertices * floatsPerVertex * 4;
+
+  // Ensure staging buffer is large enough for WORST case (just in case) or at least current size
+  if (!cachedStagingBuffer || cachedStagingBuffer.size < byteSize) {
+    if (cachedStagingBuffer) cachedStagingBuffer.destroy();
+    // Allocate max size once to avoid re-allocating if count fluctuates
+    cachedStagingBuffer = device.createBuffer({
+      size: maxByteSize,
+      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+    });
+  }
+
+  // Important: Buffer must be unmapped to be used in copyBufferToBuffer
+  if (cachedStagingBuffer.mapState === 'mapped') {
+    cachedStagingBuffer.unmap();
+  }
+
+  const gpuReadEncoder = device.createCommandEncoder();
+  gpuReadEncoder.copyBufferToBuffer(vertexBuffer, 0, cachedStagingBuffer, 0, byteSize);
+  device.queue.submit([gpuReadEncoder.finish()]);
+
+  await cachedStagingBuffer.mapAsync(GPUMapMode.READ, 0, byteSize);
+  const vertexData = new Float32Array(cachedStagingBuffer.getMappedRange(0, byteSize));
   const vertexDataCopy = new Float32Array(vertexData);
-  vertexReadBuffer.unmap();
+  cachedStagingBuffer.unmap();
 
   const elapsed = performance.now() - start;
 
