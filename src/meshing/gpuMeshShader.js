@@ -1,6 +1,7 @@
-export const CHUNK_SIZE = 96;
+export const createGpuMeshShader = (CHUNK_SIZE) => {
+    const WORDS_PER_SLICE = (CHUNK_SIZE * CHUNK_SIZE) / 32;
 
-export const gpuMeshShader = `
+    return `
 struct Voxel {
     data: array<u32>
 }
@@ -25,15 +26,15 @@ struct Counter {
 
 const CHUNK_SIZE: u32 = ${CHUNK_SIZE}u;
 const LIMIT: u32 = 3500000u; // Safety clamp
+const WORDS_PER_SLICE: u32 = ${WORDS_PER_SLICE}u;
 
 fn getVoxel(x: i32, y: i32, z: i32) -> u32 {
     if (x < 0 || x >= i32(CHUNK_SIZE) || y < 0 || y >= i32(CHUNK_SIZE) || z < 0 || z >= i32(CHUNK_SIZE)) {
         return 0u;
     }
     let flatIndex = u32(x) + u32(y) * CHUNK_SIZE + u32(z) * CHUNK_SIZE * CHUNK_SIZE;
-    let wordIndex = flatIndex >> 5u;
-    let bitOffset = flatIndex & 31u;
-    if ((voxels.data[wordIndex] & (1u << bitOffset)) != 0u) {
+    // Data is passed as padded u32 array (converted from Uint8Array on CPU)
+    if (voxels.data[flatIndex] != 0u) {
         return 1u;
     }
     return 0u;
@@ -44,8 +45,8 @@ fn setMaskBit(face: u32, slice: u32, u: u32, v: u32) {
     let wordIdx = bitIndex >> 5u;
     let bitOffset = bitIndex & 31u;
     
-    // Global word index: face * 96 * 288 + slice * 288 + wordIdx
-    let globalWordIdx = face * CHUNK_SIZE * 288u + slice * 288u + wordIdx;
+    // Global word index: face * CHUNK_SIZE * WORDS_PER_SLICE + slice * WORDS_PER_SLICE + wordIdx
+    let globalWordIdx = face * CHUNK_SIZE * WORDS_PER_SLICE + slice * WORDS_PER_SLICE + wordIdx;
     atomicOr(&masks.data[globalWordIdx], 1u << bitOffset);
 }
 
@@ -108,19 +109,19 @@ fn emitQuad(corners: array<vec3f, 4>, normal: vec3f) {
     normals.data[base2 + 6u] = normal.x; normals.data[base2 + 7u] = normal.y; normals.data[base2 + 8u] = normal.z;
 }
 
-@compute @workgroup_size(6, 96, 1) // 576 threads
+@compute @workgroup_size(6, ${CHUNK_SIZE}, 1)
 fn merge_main(@builtin(global_invocation_id) global_id: vec3u) {
     let face = global_id.x; // 0 to 5
-    let slice = global_id.y; // 0 to 95
+    let slice = global_id.y; // 0 to CHUNK_SIZE
     
     if (face >= 6u || slice >= CHUNK_SIZE) {
         return;
     }
     
     // Copy the 2D mask for this slice into private memory for fast access & clearing
-    var localMask: array<u32, 288>;
-    let offset = face * CHUNK_SIZE * 288u + slice * 288u;
-    for (var i = 0u; i < 288u; i++) {
+    var localMask: array<u32, ${WORDS_PER_SLICE}>;
+    let offset = face * CHUNK_SIZE * WORDS_PER_SLICE + slice * WORDS_PER_SLICE;
+    for (var i = 0u; i < WORDS_PER_SLICE; i++) {
         localMask[i] = atomicLoad(&masks.data[offset + i]);
     }
     
@@ -232,3 +233,4 @@ fn merge_main(@builtin(global_invocation_id) global_id: vec3u) {
     }
 }
 `;
+};

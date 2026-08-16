@@ -1,9 +1,9 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import VoxelEnginePrototype from './VoxelEnginePrototype.jsx'
+import VoxelGame from './src/VoxelGame.jsx'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <VoxelEnginePrototype />
+    <VoxelGame />
   </React.StrictMode>,
 )

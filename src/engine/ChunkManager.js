@@ -1,5 +1,5 @@
 
-import * as THREE from 'three';
+import * as THREE from 'three/webgpu';
 import { World } from './World';
 import { CPUMesher } from './meshing/CPUMesher';
 import { GPUMesher } from './meshing/GPUMesher';
@@ -12,11 +12,13 @@ import { GPUMesher } from './meshing/GPUMesher';
  * 3. Triggering meshing for dirty chunks
  */
 export class ChunkManager {
-    constructor(scene) {
+    constructor(scene, bridge, onStatsUpdate) {
         this.world = new World(scene);
         this.scene = scene;
+        this.bridge = bridge;
+        this.onStatsUpdate = onStatsUpdate || (() => { });
         this.cpuMesher = new CPUMesher();
-        this.gpuMesher = new GPUMesher();
+        this.gpuMesher = new GPUMesher(bridge);
         this.mesher = this.cpuMesher; // Default
         this.mode = 'cpu';
         this.isDirty = false;
@@ -62,6 +64,9 @@ export class ChunkManager {
         try {
             const data = await this.mesher.mesh(chunk);
             if (data) {
+                if (data.stats && this.mode === 'gpu') {
+                    this.onStatsUpdate(data.stats);
+                }
                 this.updateChunkMesh(chunk, data);
             }
         } catch (e) {
@@ -69,18 +74,25 @@ export class ChunkManager {
         }
     }
 
-    updateChunkMesh(chunk, { positions, normals, indices }) {
+    updateChunkMesh(chunk, data) {
         // Dispose old mesh
         if (chunk.mesh) {
             this.scene.remove(chunk.mesh);
             chunk.dispose();
         }
 
-        const geometry = new THREE.BufferGeometry();
-        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
-        if (indices) {
-            geometry.setIndex(new THREE.BufferAttribute(indices, 1));
+        let geometry;
+        if (data.geometry) {
+            // Zero-copy direct from GPU
+            geometry = data.geometry;
+        } else {
+            // CPU fallback
+            geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.BufferAttribute(data.positions, 3));
+            geometry.setAttribute('normal', new THREE.BufferAttribute(data.normals, 3));
+            if (data.indices) {
+                geometry.setIndex(new THREE.BufferAttribute(data.indices, 1));
+            }
         }
 
         const material = new THREE.MeshStandardMaterial({
@@ -90,6 +102,7 @@ export class ChunkManager {
         });
 
         const mesh = new THREE.Mesh(geometry, material);
+        mesh.position.set(chunk.x * 32, chunk.y * 32, chunk.z * 32); // CHUNK_SIZE is 32
         chunk.mesh = mesh;
         this.scene.add(mesh);
     }

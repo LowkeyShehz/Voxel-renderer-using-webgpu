@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from 'three/webgpu';
 
 export const CHUNK_SIZE = 32;
 const VOXEL_COUNT = CHUNK_SIZE ** 3;

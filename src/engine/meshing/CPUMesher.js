@@ -1,5 +1,5 @@
 import { Mesher } from './Mesher';
-import * as THREE from 'three';
+import * as THREE from 'three/webgpu';
 
 /**
  * CPU-based meshing implementation.

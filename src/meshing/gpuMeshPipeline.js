@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from 'three/webgpu';
 import { CHUNK_SIZE } from '../voxel/ChunkData';
 import { gpuMeshShader } from './gpuMeshShader';
 

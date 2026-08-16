@@ -3,6 +3,11 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: [
+      { find: /^three$/, replacement: 'three/webgpu' }
+    ]
+  },
   server: {
     port: 3000,
     headers: {

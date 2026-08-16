@@ -1,27 +1,33 @@
 import React, { useEffect, useRef, useState } from 'react';
-import * as THREE from 'three';
+import * as THREE from 'three/webgpu';
 import { ChunkManager } from './engine/ChunkManager';
 import { CHUNK_SIZE } from './engine/Chunk';
-import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls';
+import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+import { DirectRenderBridge } from './render/DirectRenderBridge';
 
 export default function VoxelGame() {
     const mountRef = useRef(null);
-    const [stats, setStats] = useState({ fps: 0, chunks: 0 });
+    const [stats, setStats] = useState({ fps: 0, chunks: 0, gpuTime: 0, readbackTime: 0 });
     const [mode, setMode] = useState('cpu');
     const chunkManagerRef = useRef(null);
+    const bridgeRef = useRef(null);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         // Scene Setup
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87CEEB); // Sky blue
-        scene.fog = new THREE.Fog(0x87CEEB, CHUNK_SIZE * 2, CHUNK_SIZE * 4);
+        // scene.fog = new THREE.Fog(0x87CEEB, CHUNK_SIZE * 2, CHUNK_SIZE * 4);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         camera.position.set(0, 30, 0);
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        const renderer = new THREE.WebGPURenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         mountRef.current.appendChild(renderer.domElement);
+
+        const bridge = new DirectRenderBridge(renderer);
+        bridgeRef.current = bridge;
 
         // Lighting
         const light = new THREE.DirectionalLight(0xffffff, 1.2);
@@ -31,10 +37,12 @@ export default function VoxelGame() {
 
         // Controls
         const controls = new PointerLockControls(camera, document.body);
-        scene.add(controls.getObject());
+        scene.add(camera);
 
         // Engine
-        const chunkManager = new ChunkManager(scene);
+        const chunkManager = new ChunkManager(scene, bridge, (statsUpdate) => {
+            setStats(prev => ({ ...prev, ...statsUpdate }));
+        });
         chunkManagerRef.current = chunkManager;
 
         // Movement
@@ -76,7 +84,7 @@ export default function VoxelGame() {
         let frames = 0;
         let lastStatsUpdate = 0;
 
-        const animate = () => {
+        const animate = async () => {
             frameId = requestAnimationFrame(animate);
             const time = performance.now();
             const delta = (time - prevTime) / 1000;
@@ -98,22 +106,35 @@ export default function VoxelGame() {
             }
 
             // Engine Update
-            chunkManager.update(camera.position);
-
-            renderer.render(scene, camera);
+            try {
+                chunkManager.update(camera.position);
+                await renderer.renderAsync(scene, camera);
+            } catch (err) {
+                console.error("Loop error:", err);
+                setError(err.message);
+                return;
+            }
 
             // Stats
             frames++;
             if (time - lastStatsUpdate > 1000) {
-                setStats({
+                setStats(prev => ({
+                    ...prev,
                     fps: frames,
                     chunks: chunkManager.world.chunks.size
-                });
+                }));
                 frames = 0;
                 lastStatsUpdate = time;
             }
         };
-        animate();
+
+        // Initialize WebGPURenderer and DirectRenderBridge before animating
+        bridge.init().then(() => {
+            animate();
+        }).catch(err => {
+            console.error("Initialization error:", err);
+            setError(err.message);
+        });
 
         return () => {
             cancelAnimationFrame(frameId);
@@ -133,7 +154,14 @@ export default function VoxelGame() {
 
     return (
         <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
-            <div ref={mountRef} />
+            {error ? (
+                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: '#ff4d4f', color: 'white', padding: '20px', borderRadius: '8px', zIndex: 10 }}>
+                    <h2>Error Initializing Engine</h2>
+                    <p>{error}</p>
+                </div>
+            ) : (
+                <div ref={mountRef} />
+            )}
 
             <div style={{
                 position: 'absolute',
@@ -148,6 +176,12 @@ export default function VoxelGame() {
                 <h2>Voxel Game Engine</h2>
                 <div>FPS: {stats.fps}</div>
                 <div>Chunks: {stats.chunks}</div>
+                {mode === 'gpu' && (
+                    <>
+                        <div style={{ color: '#2ecc71', marginTop: '5px' }}>GPU Meshing: {stats.gpuTime.toFixed(1)}ms</div>
+                        <div style={{ color: '#e74c3c' }}>CPU Readback: {stats.readbackTime.toFixed(1)}ms</div>
+                    </>
+                )}
                 <div style={{ marginTop: '10px' }}>
                     <button
                         onClick={() => toggleMode('cpu')}
