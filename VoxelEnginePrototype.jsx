@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import WebGPURenderer from 'three/addons/renderers/webgpu/WebGPURenderer.js';
 import { ChunkData, CHUNK_SIZE } from './src/voxel/ChunkData';
 import { TerrainGenerator } from './src/voxel/TerrainGenerator';
 import { cpuGreedyMeshGeneration } from './src/meshing/cpuGreedyMesh';
@@ -32,8 +31,8 @@ export default function VoxelEnginePrototype() {
     camera.position.set(CHUNK_SIZE * 1.5, CHUNK_SIZE * 1.5, CHUNK_SIZE * 1.5);
     camera.lookAt(CHUNK_SIZE / 2, CHUNK_SIZE / 2, CHUNK_SIZE / 2);
 
-    // Initialize WebGPURenderer instead of WebGLRenderer
-    const renderer = new WebGPURenderer({ antialias: true });
+    // Initialize WebGPURenderer
+    const renderer = new THREE.WebGPURenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     mountRef.current.appendChild(renderer.domElement);
 
@@ -83,14 +82,15 @@ export default function VoxelEnginePrototype() {
         result = cpuGreedyMeshGeneration(chunk);
         result.readbackTime = 0; // CPU path has no readback
       } else {
-        result = await gpuGreedyMeshGeneration(chunk, bridgeRef.current);
+        result = await gpuGreedyMeshGeneration(chunk);
       }
 
       setStats({ 
         time: result.time.toFixed(2), 
         quads: result.quadCount,
         naiveFaces: result.naiveFaceCount || 'N/A (Calculated by CPU)',
-        readbackTime: result.readbackTime ? result.readbackTime.toFixed(2) : 0
+        readbackTime: result.readbackTime !== undefined ? result.readbackTime.toFixed(2) : 0,
+        gpuComputeTime: result.gpuComputeTime || null
       });
 
       const { scene } = sceneRef.current;
@@ -136,13 +136,14 @@ export default function VoxelEnginePrototype() {
         }}>
           Generate Mesh ({mode.toUpperCase()})
         </button>
+        {error && <div style={{ color: '#ff6b6b', marginTop: '10px' }}>❌ {error}</div>}
         {stats.time > 0 && (
           <div style={{ marginTop: '15px' }}>
-            <div>⏱️ GPU Compute Time: <strong>{stats.time}ms</strong></div>
-            <div>⏱️ CPU Readback Time: <strong>{stats.readbackTime}ms</strong></div>
-            <div>📉 Naive Faces (No Merge): <strong>{stats.naiveFaces.toLocaleString()}</strong></div>
-            <div>📉 Greedy Quads (Merged): <strong>{stats.quads.toLocaleString()}</strong></div>
-            <div>🚀 Greedy Quads (Merged): <strong style={{ color: '#2ecc71' }}>{stats.quads.toLocaleString()}</strong></div>
+            <div>⏱️ Total Time: <strong>{stats.time}ms</strong></div>
+            {stats.gpuComputeTime && <div>⚡ GPU Compute Time: <strong>{stats.gpuComputeTime}ms</strong></div>}
+            <div>📤 Readback Time: <strong>{stats.readbackTime}ms</strong></div>
+            <div>📉 Naive Faces (No Merge): <strong>{typeof stats.naiveFaces === 'number' ? stats.naiveFaces.toLocaleString() : stats.naiveFaces}</strong></div>
+            <div>🚀 Greedy Quads (Merged): <strong style={{ color: '#2ecc71' }}>{typeof stats.quads === 'number' ? stats.quads.toLocaleString() : stats.quads}</strong></div>
             <div style={{ fontSize: '11px', color: '#95a5a6', marginTop: '5px' }}>
                Notice the massive geometry reduction!
             </div>

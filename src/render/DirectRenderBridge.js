@@ -50,7 +50,7 @@ export class DirectRenderBridge {
     // Force the attribute to be created on the GPU
     if (backend.attributeUtils && backend.attributeUtils.createAttribute) {
       // R185 internal API to create buffer if it doesn't exist
-      backend.attributeUtils.createAttribute(attribute, GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC);
+      backend.attributeUtils.createAttribute(attribute, GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC | GPUBufferUsage.STORAGE | GPUBufferUsage.INDIRECT);
     }
 
     // Retrieve the buffer
