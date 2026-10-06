@@ -10,6 +10,7 @@
  * even though plain WebGPU works fine. Creating the device here sidesteps that.
  */
 let devicePromise = null;
+let gpuInfo = null;
 
 export function getGpuDevice() {
   if (!devicePromise) {
@@ -39,10 +40,23 @@ async function createDevice() {
     console.error(`WebGPU device lost (${info.reason}): ${info.message}`);
   });
 
-  console.log('GPU device ready:', adapter.info?.description || adapter.info?.vendor || 'unknown adapter');
+  const info = adapter.info || {};
+  gpuInfo = {
+    vendor: info.vendor || '',
+    architecture: info.architecture || '',
+    device: info.device || '',
+    description: info.description || '',
+    timestampQuery: device.features.has('timestamp-query'),
+  };
+  console.log('GPU device ready:', gpuInfo.description || gpuInfo.vendor || 'unknown adapter');
   return device;
 }
 
 export function hasTimestampQuery(device) {
   return device.features.has('timestamp-query');
+}
+
+/** Adapter details for labelling benchmark exports (null until the device exists). */
+export function getGpuInfo() {
+  return gpuInfo;
 }
