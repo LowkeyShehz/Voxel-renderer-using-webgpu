@@ -74,16 +74,35 @@ export class GpuMesher {
     };
   }
 
-  _voxelBufferFor(chunk) {
+  /**
+   * Keeps one persistent GPU mirror of the chunk's occupancy bits and brings it up
+   * to date by uploading only the words edited since the last sync (the whole chunk
+   * the first time). Assumes this mesher is the only consumer of the chunk's dirty
+   * range, so edits made while another meshing mode is active are still picked up.
+   *
+   * @returns {{ buffer: GPUBuffer, uploadedBytes: number }}
+   */
+  _syncVoxelBuffer(chunk) {
+    const data = chunk.getBuffer();
     let buffer = this._voxelBuffers.get(chunk);
+
     if (!buffer) {
       buffer = this.device.createBuffer({
-        size: chunk.getBuffer().byteLength,
+        size: data.byteLength,
         usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
       });
       this._voxelBuffers.set(chunk, buffer);
+      this.device.queue.writeBuffer(buffer, 0, data);
+      chunk.consumeDirtyRange(); // the full upload supersedes any pending edits
+      return { buffer, uploadedBytes: data.byteLength };
     }
-    return buffer;
+
+    const range = chunk.consumeDirtyRange();
+    if (!range) return { buffer, uploadedBytes: 0 };
+
+    // dataOffset and size are in elements (u32 words) for typed-array sources
+    this.device.queue.writeBuffer(buffer, range.start * 4, data, range.start, range.end - range.start);
+    return { buffer, uploadedBytes: (range.end - range.start) * 4 };
   }
 
   /**
@@ -91,17 +110,18 @@ export class GpuMesher {
    * Nothing is read back here: the vertices stay in `target.positions` and the draw
    * arguments in `target.indirect`.
    *
-   * @returns {{ submitMs: number, gpuMs: Promise<number|null> }}
-   *   submitMs - CPU time spent encoding and submitting.
-   *   gpuMs    - GPU execution time from timestamp queries (null if unsupported
-   *              or `profile` is false). Reads back 16 bytes of timestamps only.
+   * @returns {{ submitMs: number, uploadedBytes: number, gpuMs: Promise<{totalMs: number, passMs: number[]}|null> }}
+   *   submitMs      - CPU time spent encoding and submitting.
+   *   uploadedBytes - occupancy bytes sent CPU -> GPU for this call (dirty range only).
+   *   gpuMs         - GPU execution time from timestamp queries, total and per pass
+   *                   [mask, merge, finalize] (null if unsupported or `profile` is
+   *                   false). Reads back 48 bytes of timestamps only.
    */
   mesh(chunk, target, { profile = false } = {}) {
     const device = this.device;
     const t0 = performance.now();
 
-    const voxelBuffer = this._voxelBufferFor(chunk);
-    device.queue.writeBuffer(voxelBuffer, 0, chunk.getBuffer());
+    const { buffer: voxelBuffer, uploadedBytes } = this._syncVoxelBuffer(chunk);
     device.queue.writeBuffer(target.indirect, 0, INDIRECT_INITIAL);
 
     const bind = (pipeline, entries) =>
@@ -120,57 +140,56 @@ export class GpuMesher {
       { binding: 4, resource: { buffer: target.indirect } },
     ]);
 
-    const timed = profile && this.timestamps;
-    let querySet = null;
-    const passDescriptor = {};
-    if (timed) {
-      querySet = device.createQuerySet({ type: 'timestamp', count: 2 });
-      passDescriptor.timestampWrites = {
-        querySet,
-        beginningOfPassWriteIndex: 0,
-        endOfPassWriteIndex: 1,
-      };
-    }
+    const steps = [
+      {
+        pipeline: this._maskPipeline,
+        group: maskGroup,
+        workgroups: [Math.ceil(CHUNK_SIZE / 4), Math.ceil(CHUNK_SIZE / 4), Math.ceil(CHUNK_SIZE / 4)],
+      },
+      { pipeline: this._mergePipeline, group: mergeGroup, workgroups: [1, Math.ceil(CHUNK_SIZE / 16), 1] },
+      { pipeline: this._finalizePipeline, group: finalizeGroup, workgroups: [1, 1, 1] },
+    ];
+    const record = (pass, step) => {
+      pass.setPipeline(step.pipeline);
+      pass.setBindGroup(0, step.group);
+      pass.dispatchWorkgroups(...step.workgroups);
+    };
 
     const encoder = device.createCommandEncoder();
     encoder.clearBuffer(this._maskBuffer);
 
-    const pass = encoder.beginComputePass(passDescriptor);
-
-    // Pass A: mask generation
-    pass.setPipeline(this._maskPipeline);
-    pass.setBindGroup(0, maskGroup);
-    pass.dispatchWorkgroups(
-      Math.ceil(CHUNK_SIZE / 4),
-      Math.ceil(CHUNK_SIZE / 4),
-      Math.ceil(CHUNK_SIZE / 4)
-    );
-
-    // Pass B: greedy merging
-    pass.setPipeline(this._mergePipeline);
-    pass.setBindGroup(0, mergeGroup);
-    pass.dispatchWorkgroups(1, Math.ceil(CHUNK_SIZE / 16), 1);
-
-    // Pass C: clamp the vertex counter
-    pass.setPipeline(this._finalizePipeline);
-    pass.setBindGroup(0, finalizeGroup);
-    pass.dispatchWorkgroups(1);
-
-    pass.end();
-
+    const timed = profile && this.timestamps;
+    let querySet = null;
     let resolveBuffer = null;
     let timestampRead = null;
+
     if (timed) {
+      // One compute pass per step so each gets its own begin/end timestamps.
+      // Passes still execute in order with storage writes visible to the next one.
+      const queryCount = steps.length * 2;
+      const bytes = queryCount * 8;
+      querySet = device.createQuerySet({ type: 'timestamp', count: queryCount });
+      steps.forEach((step, i) => {
+        const pass = encoder.beginComputePass({
+          timestampWrites: { querySet, beginningOfPassWriteIndex: 2 * i, endOfPassWriteIndex: 2 * i + 1 },
+        });
+        record(pass, step);
+        pass.end();
+      });
       resolveBuffer = device.createBuffer({
-        size: 16,
+        size: bytes,
         usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.COPY_SRC,
       });
       timestampRead = device.createBuffer({
-        size: 16,
+        size: bytes,
         usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
       });
-      encoder.resolveQuerySet(querySet, 0, 2, resolveBuffer, 0);
-      encoder.copyBufferToBuffer(resolveBuffer, 0, timestampRead, 0, 16);
+      encoder.resolveQuerySet(querySet, 0, queryCount, resolveBuffer, 0);
+      encoder.copyBufferToBuffer(resolveBuffer, 0, timestampRead, 0, bytes);
+    } else {
+      const pass = encoder.beginComputePass();
+      steps.forEach((step) => record(pass, step));
+      pass.end();
     }
 
     device.queue.submit([encoder.finish()]);
@@ -179,16 +198,16 @@ export class GpuMesher {
     const gpuMs = timed
       ? timestampRead.mapAsync(GPUMapMode.READ).then(() => {
           const t = new BigUint64Array(timestampRead.getMappedRange());
-          const ms = Number(t[1] - t[0]) / 1e6;
+          const passMs = steps.map((_, i) => Number(t[2 * i + 1] - t[2 * i]) / 1e6);
           timestampRead.unmap();
           timestampRead.destroy();
           resolveBuffer.destroy();
           querySet.destroy();
-          return ms;
+          return { totalMs: passMs.reduce((a, b) => a + b, 0), passMs };
         })
       : Promise.resolve(null);
 
-    return { submitMs, gpuMs };
+    return { submitMs, uploadedBytes, gpuMs };
   }
 
   /** Resolves when everything submitted so far has finished executing on the GPU. No data is read back. */
@@ -233,7 +252,7 @@ export class GpuMesher {
     const device = this.device;
     const start = performance.now();
 
-    const { submitMs, gpuMs } = this.mesh(chunk, target, { profile: true });
+    const { submitMs, uploadedBytes, gpuMs } = this.mesh(chunk, target, { profile: true });
 
     // Mapping the counter waits for the compute work to finish.
     const counters = await this.readCounters(target);
@@ -241,6 +260,7 @@ export class GpuMesher {
 
     const geometry = new THREE.BufferGeometry();
     let readbackMs = 0;
+    let readbackBytes = 0;
 
     if (counters.vertexCount > 0) {
       const readbackStart = performance.now();
@@ -264,17 +284,22 @@ export class GpuMesher {
       geometry.setAttribute('position', new THREE.InterleavedBufferAttribute(interleaved, 3, 0));
 
       readbackMs = performance.now() - readbackStart;
+      readbackBytes = byteSize;
     }
 
     const totalMs = performance.now() - start;
+    const gpuTiming = await gpuMs; // already resolved by now; awaited after totalMs so it is not counted
     return {
       geometry,
       quadCount: counters.quadCount,
       overflowed: counters.overflowed,
       submitMs,
-      gpuMs: await gpuMs, // already resolved by now; awaited after totalMs so it is not counted
+      uploadedBytes,
+      gpuMs: gpuTiming?.totalMs ?? null,
+      passMs: gpuTiming?.passMs ?? null,
       waitMs, // upload + compute + queue wait, up to the counter becoming readable
       readbackMs,
+      readbackBytes,
       totalMs,
     };
   }

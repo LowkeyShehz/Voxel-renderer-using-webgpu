@@ -1,0 +1,10 @@
+# Normalize all text files to LF in the repo and on checkout (avoids CRLF churn from Windows clients)
+* text=auto eol=lf
+
+# Binary assets
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff2 binary
