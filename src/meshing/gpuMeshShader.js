@@ -1,5 +1,19 @@
-export const createGpuMeshShader = (CHUNK_SIZE) => {
+/**
+ * WGSL source for the two-pass greedy mesher plus a finalize step.
+ *
+ * Output layout (shared with gpuMeshPipeline.js):
+ *   positions : array<vec4f>, 6 vertices per quad, w = face id (0..5: +X -X +Y -Y +Z -Z)
+ *   indirect  : [vertexCount, instanceCount, firstVertex, firstInstance, requestedVertices]
+ *               The first four words are exactly the GPUDrawIndirect argument layout,
+ *               so the same buffer can drive drawIndirect() with no CPU involvement.
+ *
+ * Normals are not written: they are fully determined by the face id, and the
+ * material uses flat shading.
+ */
+export const createGpuMeshShader = (CHUNK_SIZE, MAX_VERTICES) => {
     const WORDS_PER_SLICE = (CHUNK_SIZE * CHUNK_SIZE) / 32;
+    // Only whole quads are ever written, so the usable capacity is a multiple of 6.
+    const VERTEX_CAP = Math.floor(MAX_VERTICES / 6) * 6;
 
     return `
 struct Voxel {
@@ -10,25 +24,25 @@ struct MaskBuffer {
     data: array<atomic<u32>>
 }
 
-struct FloatArray {
-    data: array<f32>
+struct Vec4Array {
+    data: array<vec4f>
 }
 
 struct IndirectDrawParams {
     vertexCount: atomic<u32>,
     instanceCount: u32,
     firstVertex: u32,
-    firstInstance: u32
+    firstInstance: u32,
+    requestedVertices: atomic<u32>
 }
 
 @group(0) @binding(0) var<storage, read> voxels: Voxel;
 @group(0) @binding(1) var<storage, read_write> masks: MaskBuffer;
-@group(0) @binding(2) var<storage, read_write> positions: FloatArray;
-@group(0) @binding(3) var<storage, read_write> normals: FloatArray;
+@group(0) @binding(2) var<storage, read_write> positions: Vec4Array;
 @group(0) @binding(4) var<storage, read_write> indirectParams: IndirectDrawParams;
 
 const CHUNK_SIZE: u32 = ${CHUNK_SIZE}u;
-const LIMIT: u32 = 500000u; // Safety clamp — must match MAX_VERTICES in JS
+const VERTEX_CAP: u32 = ${VERTEX_CAP}u; // Derived from MAX_VERTICES in JS, so the two cannot drift apart
 const WORDS_PER_SLICE: u32 = ${WORDS_PER_SLICE}u;
 
 fn getVoxel(x: i32, y: i32, z: i32) -> u32 {
@@ -36,10 +50,10 @@ fn getVoxel(x: i32, y: i32, z: i32) -> u32 {
         return 0u;
     }
     let flatIndex = u32(x) + u32(y) * CHUNK_SIZE + u32(z) * CHUNK_SIZE * CHUNK_SIZE;
-    
+
     let wordIdx = flatIndex >> 5u;
     let bitOffset = flatIndex & 31u;
-    
+
     if ((voxels.data[wordIdx] & (1u << bitOffset)) != 0u) {
         return 1u;
     }
@@ -50,7 +64,7 @@ fn setMaskBit(face: u32, slice: u32, u: u32, v: u32) {
     let bitIndex = u + v * CHUNK_SIZE;
     let wordIdx = bitIndex >> 5u;
     let bitOffset = bitIndex & 31u;
-    
+
     // Global word index: face * CHUNK_SIZE * WORDS_PER_SLICE + slice * WORDS_PER_SLICE + wordIdx
     let globalWordIdx = face * CHUNK_SIZE * WORDS_PER_SLICE + slice * WORDS_PER_SLICE + wordIdx;
     atomicOr(&masks.data[globalWordIdx], 1u << bitOffset);
@@ -62,17 +76,17 @@ fn mask_main(@builtin(global_invocation_id) global_id: vec3u) {
     let x = i32(global_id.x);
     let y = i32(global_id.y);
     let z = i32(global_id.z);
-    
+
     if (x >= i32(CHUNK_SIZE) || y >= i32(CHUNK_SIZE) || z >= i32(CHUNK_SIZE)) {
         return;
     }
-    
+
     if (getVoxel(x, y, z) == 0u) {
         return;
     }
-    
+
     let ux = u32(x); let uy = u32(y); let uz = u32(z);
-    
+
     // Face 0: +X (Right) -> slice x, u=y, v=z
     if (getVoxel(x + 1, y, z) == 0u) { setMaskBit(0u, ux, uy, uz); }
     // Face 1: -X (Left) -> slice x, u=y, v=z
@@ -88,49 +102,40 @@ fn mask_main(@builtin(global_invocation_id) global_id: vec3u) {
 }
 
 // --- PASS B: GREEDY MERGING ---
-fn emitQuad(corners: array<vec3f, 4>, normal: vec3f) {
-    let baseVertexIdx = atomicAdd(&indirectParams.vertexCount, 6u);
-    if (baseVertexIdx + 6u >= LIMIT) { return; }
-    
-    // Convert vertex index to float array index
-    let base = baseVertexIdx * 3u;
-    
+fn emitQuad(corners: array<vec4f, 4>) {
+    let base = atomicAdd(&indirectParams.vertexCount, 6u);
+    // The counter keeps counting past the cap so finalize_main can report how much
+    // was requested; a quad is only written if all six of its vertices fit.
+    if (base + 6u > VERTEX_CAP) { return; }
+
     // Triangle 1
-    positions.data[base + 0u] = corners[0].x; positions.data[base + 1u] = corners[0].y; positions.data[base + 2u] = corners[0].z;
-    positions.data[base + 3u] = corners[1].x; positions.data[base + 4u] = corners[1].y; positions.data[base + 5u] = corners[1].z;
-    positions.data[base + 6u] = corners[2].x; positions.data[base + 7u] = corners[2].y; positions.data[base + 8u] = corners[2].z;
-    
-    normals.data[base + 0u] = normal.x; normals.data[base + 1u] = normal.y; normals.data[base + 2u] = normal.z;
-    normals.data[base + 3u] = normal.x; normals.data[base + 4u] = normal.y; normals.data[base + 5u] = normal.z;
-    normals.data[base + 6u] = normal.x; normals.data[base + 7u] = normal.y; normals.data[base + 8u] = normal.z;
-    
+    positions.data[base + 0u] = corners[0];
+    positions.data[base + 1u] = corners[1];
+    positions.data[base + 2u] = corners[2];
     // Triangle 2
-    let base2 = base + 9u;
-    positions.data[base2 + 0u] = corners[0].x; positions.data[base2 + 1u] = corners[0].y; positions.data[base2 + 2u] = corners[0].z;
-    positions.data[base2 + 3u] = corners[2].x; positions.data[base2 + 4u] = corners[2].y; positions.data[base2 + 5u] = corners[2].z;
-    positions.data[base2 + 6u] = corners[3].x; positions.data[base2 + 7u] = corners[3].y; positions.data[base2 + 8u] = corners[3].z;
-    
-    normals.data[base2 + 0u] = normal.x; normals.data[base2 + 1u] = normal.y; normals.data[base2 + 2u] = normal.z;
-    normals.data[base2 + 3u] = normal.x; normals.data[base2 + 4u] = normal.y; normals.data[base2 + 5u] = normal.z;
-    normals.data[base2 + 6u] = normal.x; normals.data[base2 + 7u] = normal.y; normals.data[base2 + 8u] = normal.z;
+    positions.data[base + 3u] = corners[0];
+    positions.data[base + 4u] = corners[2];
+    positions.data[base + 5u] = corners[3];
 }
 
 @compute @workgroup_size(6, 16, 1)
 fn merge_main(@builtin(global_invocation_id) global_id: vec3u) {
     let face = global_id.x; // 0 to 5
     let slice = global_id.y; // 0 to CHUNK_SIZE
-    
+
     if (face >= 6u || slice >= CHUNK_SIZE) {
         return;
     }
-    
+
     // Copy the 2D mask for this slice into private memory for fast access & clearing
     var localMask: array<u32, ${WORDS_PER_SLICE}>;
     let offset = face * CHUNK_SIZE * WORDS_PER_SLICE + slice * WORDS_PER_SLICE;
     for (var i = 0u; i < WORDS_PER_SLICE; i++) {
         localMask[i] = atomicLoad(&masks.data[offset + i]);
     }
-    
+
+    let fw = f32(face); // packed into the w component of every vertex
+
     // Greedy meshing
     for (var v = 0u; v < CHUNK_SIZE; v++) {
         for (var u = 0u; u < CHUNK_SIZE; u++) {
@@ -139,7 +144,7 @@ fn merge_main(@builtin(global_invocation_id) global_id: vec3u) {
             let startWordIdx = startBitIndex >> 5u;
             let startBitOffset = startBitIndex & 31u;
             let isSet = (localMask[startWordIdx] & (1u << startBitOffset)) != 0u;
-            
+
             if (isSet) {
                 // Find width
                 var w = 1u;
@@ -154,7 +159,7 @@ fn merge_main(@builtin(global_invocation_id) global_id: vec3u) {
                         keepGoing = false;
                     }
                 }
-                
+
                 // Find height
                 var h = 1u;
                 var done = false;
@@ -172,7 +177,7 @@ fn merge_main(@builtin(global_invocation_id) global_id: vec3u) {
                         h++;
                     }
                 }
-                
+
                 // Clear the mask (inline clearLocalMaskBits)
                 for (var dv = 0u; dv < h; dv++) {
                     for (var du = 0u; du < w; du++) {
@@ -182,67 +187,73 @@ fn merge_main(@builtin(global_invocation_id) global_id: vec3u) {
                         localMask[cwi] &= ~(1u << cbo);
                     }
                 }
-                
+
                 // Emit Quad based on face
                 let f_slice = f32(slice);
                 let f_u = f32(u); let f_v = f32(v);
                 let f_w = f32(w); let f_h = f32(h);
-                var corners: array<vec3f, 4>;
-                var normal: vec3f;
-                
+                var corners: array<vec4f, 4>;
+
                 if (face == 0u) { // +X
-                    normal = vec3f(1, 0, 0);
-                    corners = array<vec3f, 4>(
-                        vec3f(f_slice + 1.0, f_u, f_v),
-                        vec3f(f_slice + 1.0, f_u + f_w, f_v),
-                        vec3f(f_slice + 1.0, f_u + f_w, f_v + f_h),
-                        vec3f(f_slice + 1.0, f_u, f_v + f_h)
+                    corners = array<vec4f, 4>(
+                        vec4f(f_slice + 1.0, f_u, f_v, fw),
+                        vec4f(f_slice + 1.0, f_u + f_w, f_v, fw),
+                        vec4f(f_slice + 1.0, f_u + f_w, f_v + f_h, fw),
+                        vec4f(f_slice + 1.0, f_u, f_v + f_h, fw)
                     );
                 } else if (face == 1u) { // -X
-                    normal = vec3f(-1, 0, 0);
-                    corners = array<vec3f, 4>(
-                        vec3f(f_slice, f_u, f_v + f_h),
-                        vec3f(f_slice, f_u + f_w, f_v + f_h),
-                        vec3f(f_slice, f_u + f_w, f_v),
-                        vec3f(f_slice, f_u, f_v)
+                    corners = array<vec4f, 4>(
+                        vec4f(f_slice, f_u, f_v + f_h, fw),
+                        vec4f(f_slice, f_u + f_w, f_v + f_h, fw),
+                        vec4f(f_slice, f_u + f_w, f_v, fw),
+                        vec4f(f_slice, f_u, f_v, fw)
                     );
                 } else if (face == 2u) { // +Y
-                    normal = vec3f(0, 1, 0);
-                    corners = array<vec3f, 4>(
-                        vec3f(f_u, f_slice + 1.0, f_v),
-                        vec3f(f_u, f_slice + 1.0, f_v + f_h),
-                        vec3f(f_u + f_w, f_slice + 1.0, f_v + f_h),
-                        vec3f(f_u + f_w, f_slice + 1.0, f_v)
+                    corners = array<vec4f, 4>(
+                        vec4f(f_u, f_slice + 1.0, f_v, fw),
+                        vec4f(f_u, f_slice + 1.0, f_v + f_h, fw),
+                        vec4f(f_u + f_w, f_slice + 1.0, f_v + f_h, fw),
+                        vec4f(f_u + f_w, f_slice + 1.0, f_v, fw)
                     );
                 } else if (face == 3u) { // -Y
-                    normal = vec3f(0, -1, 0);
-                    corners = array<vec3f, 4>(
-                        vec3f(f_u, f_slice, f_v + f_h),
-                        vec3f(f_u, f_slice, f_v),
-                        vec3f(f_u + f_w, f_slice, f_v),
-                        vec3f(f_u + f_w, f_slice, f_v + f_h)
+                    corners = array<vec4f, 4>(
+                        vec4f(f_u, f_slice, f_v + f_h, fw),
+                        vec4f(f_u, f_slice, f_v, fw),
+                        vec4f(f_u + f_w, f_slice, f_v, fw),
+                        vec4f(f_u + f_w, f_slice, f_v + f_h, fw)
                     );
                 } else if (face == 4u) { // +Z
-                    normal = vec3f(0, 0, 1);
-                    corners = array<vec3f, 4>(
-                        vec3f(f_u + f_w, f_v, f_slice + 1.0),
-                        vec3f(f_u + f_w, f_v + f_h, f_slice + 1.0),
-                        vec3f(f_u, f_v + f_h, f_slice + 1.0),
-                        vec3f(f_u, f_v, f_slice + 1.0)
+                    corners = array<vec4f, 4>(
+                        vec4f(f_u + f_w, f_v, f_slice + 1.0, fw),
+                        vec4f(f_u + f_w, f_v + f_h, f_slice + 1.0, fw),
+                        vec4f(f_u, f_v + f_h, f_slice + 1.0, fw),
+                        vec4f(f_u, f_v, f_slice + 1.0, fw)
                     );
                 } else if (face == 5u) { // -Z
-                    normal = vec3f(0, 0, -1);
-                    corners = array<vec3f, 4>(
-                        vec3f(f_u, f_v, f_slice),
-                        vec3f(f_u, f_v + f_h, f_slice),
-                        vec3f(f_u + f_w, f_v + f_h, f_slice),
-                        vec3f(f_u + f_w, f_v, f_slice)
+                    corners = array<vec4f, 4>(
+                        vec4f(f_u, f_v, f_slice, fw),
+                        vec4f(f_u, f_v + f_h, f_slice, fw),
+                        vec4f(f_u + f_w, f_v + f_h, f_slice, fw),
+                        vec4f(f_u + f_w, f_v, f_slice, fw)
                     );
                 }
-                
-                emitQuad(corners, normal);
+
+                emitQuad(corners);
             }
         }
+    }
+}
+
+// --- PASS C: FINALIZE ---
+// Clamps the vertex counter to what was actually written, so drawIndirect() can
+// never read past the end of the position buffer. The unclamped total is kept in
+// requestedVertices to detect overflow.
+@compute @workgroup_size(1)
+fn finalize_main() {
+    let total = atomicLoad(&indirectParams.vertexCount);
+    atomicStore(&indirectParams.requestedVertices, total);
+    if (total > VERTEX_CAP) {
+        atomicStore(&indirectParams.vertexCount, VERTEX_CAP);
     }
 }
 `;
