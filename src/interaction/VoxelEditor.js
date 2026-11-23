@@ -9,10 +9,12 @@ const CLICK_MAX_MS = 400;
  * Turns pointer input on the canvas into voxel picks. It only picks; what to do with
  * a pick (remove, place, explode) is decided by the caller.
  *
- * Picking raycasts the chunk's occupancy data (see raycastVoxels), so it works
- * identically for all meshing modes, including zero-copy where there is no CPU geometry.
+ * Picking raycasts the world's occupancy data (see raycastVoxels), so it works
+ * identically for all meshing modes, including zero-copy where there is no CPU
+ * geometry. Hits are in world voxel coordinates. While the pointer is locked
+ * (free-fly mouse-look) it picks from the centre of the screen.
  *
- * Coexists with OrbitControls: left/right *drags* move the camera, short *clicks*
+ * Coexists with OrbitControls / FreeFlyControls: left/right *drags* move the camera, short *clicks*
  * come here.
  */
 export class VoxelEditor {
@@ -20,15 +22,15 @@ export class VoxelEditor {
    * @param {object} opts
    * @param {HTMLElement} opts.domElement
    * @param {THREE.Camera} opts.camera
-   * @param {() => import('../voxel/ChunkData').ChunkData} opts.getChunk
+   * @param {() => import('../voxel/ChunkManager.js').ChunkManager} opts.getWorld
    * @param {(e: {button: number, hit: object}) => void} opts.onPick  button 0 = left, 2 = right
    * @param {(hit: object|null) => void} [opts.onHover]
    * @param {() => boolean} [opts.isEnabled]
    */
-  constructor({ domElement, camera, getChunk, onPick, onHover, isEnabled = () => true }) {
+  constructor({ domElement, camera, getWorld, onPick, onHover, isEnabled = () => true }) {
     this.domElement = domElement;
     this.camera = camera;
-    this.getChunk = getChunk;
+    this.getWorld = getWorld;
     this.onPick = onPick;
     this.onHover = onHover;
     this.isEnabled = isEnabled;
@@ -53,14 +55,18 @@ export class VoxelEditor {
   }
 
   _pick(event) {
-    const rect = this.domElement.getBoundingClientRect();
-    this._ndc.set(
-      ((event.clientX - rect.left) / rect.width) * 2 - 1,
-      -((event.clientY - rect.top) / rect.height) * 2 + 1
-    );
+    if (document.pointerLockElement === this.domElement) {
+      this._ndc.set(0, 0); // crosshair
+    } else {
+      const rect = this.domElement.getBoundingClientRect();
+      this._ndc.set(
+        ((event.clientX - rect.left) / rect.width) * 2 - 1,
+        -((event.clientY - rect.top) / rect.height) * 2 + 1
+      );
+    }
     this._raycaster.setFromCamera(this._ndc, this.camera);
     const { origin, direction } = this._raycaster.ray;
-    return raycastVoxels(this.getChunk(), origin, direction);
+    return raycastVoxels(this.getWorld(), origin, direction);
   }
 
   _onPointerDown(e) {

@@ -3,6 +3,7 @@ import { MODES } from '../meshing/MeshController';
 
 export const fmt = (v, digits = 2) => (typeof v === 'number' ? v.toFixed(digits) : '–');
 export const fmtMs = (v) => (typeof v === 'number' ? `${v.toFixed(2)} ms` : 'n/a');
+export const fmtMB = (bytes) => (typeof bytes === 'number' ? `${(bytes / 1048576).toFixed(1)} MB` : '–');
 export const fmtKB = (bytes) => (typeof bytes === 'number' ? `${(bytes / 1024).toFixed(bytes < 10240 ? 1 : 0)} KB` : '–');
 
 const muted = { fontSize: '11px', color: '#95a5a6' };
@@ -19,6 +20,7 @@ export function MeshStats({ stats, timestamps }) {
         {MODES[stats.mode].label} ·{' '}
         {stats.runs > 1 ? `median of ${stats.runs} runs (after ${stats.warmup} warm-up)` : 'single run'}
         {stats.mergeImpl && ` · merge: ${stats.mergeImpl}`}
+        {stats.chunks > 1 && ` · ${stats.chunks} chunks (times summed)`}
       </div>
       <div>⏱️ Total Time: <strong>{fmtMs(shown.totalMs)}</strong></div>
       {stats.runs > 1 && <div>🏁 Best Run: <strong>{fmtMs(stats.minTotalMs)}</strong></div>}
@@ -39,7 +41,7 @@ export function MeshStats({ stats, timestamps }) {
       <div>
         🔁 CPU↔GPU transfer: <strong>↑ {fmtKB(stats.last.bytesUp)}</strong> <strong>↓ {fmtKB(stats.last.bytesDown)}</strong>
       </div>
-      <div>📉 Naive Faces (No Merge): <strong>{stats.naiveFaces != null ? stats.naiveFaces.toLocaleString() : 'run CPU once to compute'}</strong></div>
+      <div>📉 Naive Faces (No Merge): <strong>{stats.naiveFaces != null ? stats.naiveFaces.toLocaleString() : 'CPU mode only'}</strong></div>
       <div>🚀 Greedy Quads (Merged): <strong style={{ color: '#2ecc71' }}>{stats.quads?.toLocaleString() ?? '–'}</strong></div>
       {stats.overflowed && <div style={{ color: '#ff6b6b' }}>⚠️ Output buffer overflowed — mesh is truncated</div>}
       <div style={{ ...muted, marginTop: '6px' }}>CPU time excludes Three's geometry upload on first draw.</div>
@@ -50,19 +52,39 @@ export function MeshStats({ stats, timestamps }) {
 /** Result of the GPU-vs-CPU correctness check (one line per merge implementation). */
 export function CorrectnessResult({ report }) {
   if (!report) return null;
-  return (
-    <div style={{ marginTop: '8px', fontSize: '12px' }}>
-      <div style={{ color: report.pass ? '#2ecc71' : '#ff6b6b' }}>
-        {report.pass ? '✅' : '❌'} CPU: <strong>{report.cpuQuads.toLocaleString()}</strong> quads (default terrain)
-      </div>
-      {report.results.map((r) => (
-        <div key={r.impl} style={{ color: r.countMatch && r.setsEqual ? 'white' : '#ff6b6b' }}>
-          &nbsp;&nbsp;GPU {r.impl}: <strong>{r.gpuQuads.toLocaleString()}</strong> quads ·{' '}
-          {r.setsEqual ? 'same quad set' : `quad sets differ (${r.onlyInCpu.length}+ only on CPU, ${r.onlyInGpu.length}+ only on GPU)`}
-          {r.overflowed && ' · overflowed'}
+  const block = (title, sum) => (
+    <div key={title}>
+      <div>{title}: CPU <strong>{sum.cpuQuads.toLocaleString()}</strong> quads</div>
+      {sum.impls.map((r) => (
+        <div key={r.impl} style={{ color: r.pass ? 'white' : '#ff6b6b' }}>
+          &nbsp;&nbsp;GPU {r.impl}: <strong>{r.gpuQuads.toLocaleString()}</strong> quads · {r.pass ? 'same quad set' : 'MISMATCH (see console)'}
         </div>
       ))}
+    </div>
+  );
+  return (
+    <div style={{ marginTop: '8px', fontSize: '12px' }}>
+      <div style={{ color: report.pass ? '#2ecc71' : '#ff6b6b' }}>{report.pass ? '✅ GPU matches CPU' : '❌ GPU differs from CPU'}</div>
+      {block('1 chunk (default terrain)', report.single)}
+      {block('2x2 world, with neighbours', report.world2x2)}
       <div style={muted}>Details in the console.</div>
+    </div>
+  );
+}
+
+/** World size, total shown quads and GPU memory held for meshing. */
+export function WorldInfo({ info }) {
+  if (!info) return null;
+  const m = info.memory;
+  return (
+    <div style={{ marginTop: '12px', fontSize: '12px' }}>
+      <div>
+        🌍 World <strong>{info.gridSize}×{info.gridSize}</strong> = {info.chunks} chunk{info.chunks === 1 ? '' : 's'}
+        {info.quads != null && <> · <strong>{info.quads.toLocaleString()}</strong> quads shown</>}
+      </div>
+      <div style={muted}>
+        GPU meshing memory: output {fmtMB(m.outputBytes)} · voxels {fmtMB(m.voxelBytes)} · scratch {fmtMB(m.scratchBytes)}
+      </div>
     </div>
   );
 }
@@ -74,10 +96,12 @@ export function EditInfo({ info }) {
     <div style={{ marginTop: '10px', fontSize: '12px' }}>
       <div>
         ✏️ {info.label}: <strong>{info.voxels.toLocaleString()}</strong> voxel{info.voxels === 1 ? '' : 's'} · remesh{' '}
-        <strong>{fmtMs(info.totalMs)}</strong> <span style={muted}>({MODES[info.mode].label})</span>
+        <strong>{fmtMs(info.totalMs)}</strong>
+        {info.chunks > 1 && ` over ${info.chunks} chunks`} <span style={muted}>({MODES[info.mode].label})</span>
       </div>
       <div style={muted}>
         transfer ↑ {fmtKB(info.bytesUp)} ↓ {fmtKB(info.bytesDown)}
+        {typeof info.wallMs === 'number' && info.chunks > 1 && ` · done after ${fmtMs(info.wallMs)}`}
         {info.quadCount != null && ` · ${info.quadCount.toLocaleString()} quads`}
       </div>
     </div>
@@ -122,7 +146,9 @@ export function BenchmarkResults({ idle, results }) {
           <th style={cell} title="frames slower than 2x the median">hitches</th>
           <th style={cell} title="frames slower than 33.3 ms">&gt;33ms</th>
           <th style={cell} title="recorded frame time / wall-clock time; low = rendering was paused">cov.</th>
-          <th style={cell} title="median remesh time per edit">edit ms</th>
+          <th style={cell} title="median meshing time per edit, summed over the chunks it touched">edit ms</th>
+          <th style={cell} title="median time from the edit until its last chunk was shown (one chunk per frame)">latency</th>
+          <th style={cell} title="average chunks remeshed per edit">chunks</th>
           <th style={cell} title="average CPU->GPU bytes per edit">↑/edit</th>
           <th style={cell} title="average GPU->CPU bytes per edit">↓/edit</th>
         </tr>
@@ -132,7 +158,7 @@ export function BenchmarkResults({ idle, results }) {
           <tr style={{ color: '#95a5a6' }}>
             <td style={{ ...cell, textAlign: 'left' }}>idle (no edits)</td>
             {fmtFrames(idle)}
-            <td style={cell}>–</td><td style={cell}>–</td><td style={cell}>–</td>
+            <td style={cell}>–</td><td style={cell}>–</td><td style={cell}>–</td><td style={cell}>–</td><td style={cell}>–</td>
           </tr>
         )}
         {results.map((r) => (
@@ -140,6 +166,8 @@ export function BenchmarkResults({ idle, results }) {
             <td style={{ ...cell, textAlign: 'left' }}>{MODES[r.mode].label}</td>
             {fmtFrames(r.frames)}
             <td style={cell}>{fmt(r.editMs.median)}</td>
+            <td style={cell}>{fmt(r.latencyMs?.median)}</td>
+            <td style={cell}>{fmt(r.chunksPerEdit, 1)}</td>
             <td style={cell}>{fmtKB(r.bytesUpPerEdit)}</td>
             <td style={cell}>{fmtKB(r.bytesDownPerEdit)}</td>
           </tr>
