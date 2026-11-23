@@ -12,8 +12,10 @@ import { getGpuDevice, getGpuInfo } from './src/gpu/gpuContext';
 import { VoxelEditor } from './src/interaction/VoxelEditor';
 import { FrameRecorder } from './src/benchmark/FrameRecorder';
 import { runEditBenchmark, measureIdleFrames } from './src/benchmark/editBenchmark';
+import { runSweep, estimateSweepSeconds, SWEEP_REPEATS } from './src/benchmark/sweepBenchmark';
+import { summarizeSweep } from './src/benchmark/sweepSummary.js';
 import { median, medianPassMs } from './src/benchmark/stats';
-import { MeshStats, EditInfo, BenchmarkResults, CorrectnessResult, WorldInfo, fmt } from './src/ui/panels';
+import { MeshStats, EditInfo, BenchmarkResults, CorrectnessResult, WorldInfo, SweepResults, fmt } from './src/ui/panels';
 
 /**
  * VOXEL ENGINE PROTOTYPE - WebGPU Compute Shader Meshing
@@ -64,10 +66,12 @@ export default function VoxelEnginePrototype() {
   const [frameInfo, setFrameInfo] = useState(null);
   const [recorder] = useState(() => new FrameRecorder());
   const [check, setCheck] = useState(null); // correctness check report
+  const [sweepMax, setSweepMax] = useState(4); // sweep grids 1x1 .. sweepMax x sweepMax
+  const [sweep, setSweep] = useState({ running: false, progress: null, idle: null, runs: [], summary: [], meta: null });
 
   // Event handlers registered once (pointer events, render loop) need current values.
   const latest = useRef({});
-  latest.current = { mode, tool, radius, benchRunning: bench.running };
+  latest.current = { mode, tool, radius, benchRunning: bench.running || sweep.running };
 
   // Everything that lives outside React's render cycle.
   const ctx = useRef({
@@ -81,7 +85,7 @@ export default function VoxelEnginePrototype() {
   });
 
   const modeColor = `#${MODES[mode].color.toString(16).padStart(6, '0')}`;
-  const locked = busy || bench.running;
+  const locked = busy || bench.running || sweep.running;
 
   /** Refreshes the world summary (chunks, quads, GPU memory). */
   const updateWorldInfo = useCallback(() => {
@@ -471,6 +475,68 @@ export default function VoxelEnginePrototype() {
     }
   };
 
+  // ---- sweep: grid sizes x modes x repeats ---------------------------------
+  const sweepModes = Object.keys(MODES).filter((m) => available[m]);
+  const sweepGrids = Array.from({ length: sweepMax }, (_, i) => i + 1);
+
+  const runSweepBenchmark = async () => {
+    const ctrl = ctx.current.controller;
+    if (!ctrl) return;
+    if (document.visibilityState !== 'visible') {
+      setError('Keep this tab visible: the browser pauses rendering in background tabs, which would invalidate the frame times.');
+      return;
+    }
+    setError(null);
+    const meta = {
+      date: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+      gpu: getGpuInfo(),
+      hardwareConcurrency: navigator.hardwareConcurrency ?? null,
+      deviceMemoryGB: navigator.deviceMemory ?? null,
+      display: { devicePixelRatio: window.devicePixelRatio, viewport: [window.innerWidth, window.innerHeight] },
+      chunkSize: CHUNK_SIZE,
+      mergeImpl: gpu.mergeImpl ?? null,
+      mergeWorkgroupSize: gpu.mergeWorkgroupSize ?? null,
+      grids: sweepGrids,
+      modes: sweepModes,
+      repeats: SWEEP_REPEATS,
+      ...EDIT_BENCH,
+      radius,
+    };
+    setSweep({ running: true, progress: 'measuring idle frame time…', idle: null, runs: [], summary: [], meta });
+    let result = null;
+    try {
+      result = await runSweep({
+        controller: ctrl, recorder, grids: sweepGrids, modes: sweepModes, repeats: SWEEP_REPEATS, radius, ...EDIT_BENCH,
+        setGridSize: (n) => changeWorld(n, null),
+        onProgress: (progress) => setSweep((s) => ({ ...s, progress })),
+        onRun: (_, runs) => setSweep((s) => ({ ...s, runs: [...runs], summary: summarizeSweep(runs) })),
+      });
+    } catch (err) {
+      console.error(err);
+      setError(err.message);
+    } finally {
+      try {
+        ctrl.resetTerrain();
+        await ctrl.remesh(mode);
+        updateWorldInfo();
+      } catch (err) {
+        console.error(err);
+      }
+      setSweep((s) => ({ ...s, ...(result ?? {}), running: false, progress: null }));
+    }
+  };
+
+  const exportSweep = () => {
+    const payload = { kind: 'sweep', meta: sweep.meta, idle: sweep.idle, summary: sweep.summary, runs: sweep.runs };
+    const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sweep-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const exportBenchmark = () => {
     const payload = {
       meta: {
@@ -629,6 +695,28 @@ export default function VoxelEnginePrototype() {
           </div>
           {bench.progress && <div style={{ marginTop: '8px', fontSize: '12px', color: '#f39c12' }}>⏳ {bench.progress}</div>}
         </div>
+
+        {/* Sweep */}
+        <div style={section}>
+          <div style={{ marginBottom: '6px' }}><strong>🧪 Sweep benchmark</strong></div>
+          <div style={{ fontSize: '12px', color: '#95a5a6', marginBottom: '8px' }}>
+            For each world from 1×1 to{' '}
+            <select value={sweepMax} disabled={locked} onChange={(e) => setSweepMax(Number(e.target.value))}>
+              {Array.from({ length: MAX_GRID_SIZE }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}×{n}</option>)}
+            </select>
+            {' '}and each available mode, {SWEEP_REPEATS} runs of: full meshing of the grid + the edit benchmark above.
+            About {Math.ceil(estimateSweepSeconds({ grids: sweepGrids, modes: sweepModes, repeats: SWEEP_REPEATS, ...EDIT_BENCH }) / 60)} min; keep the tab visible.
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button onClick={runSweepBenchmark} disabled={locked} style={button('#2980b9', locked)}>
+              {sweep.running ? 'Running…' : 'Run sweep'}
+            </button>
+            <button onClick={exportSweep} disabled={sweep.running || sweep.runs.length === 0} style={button('#2980b9', sweep.running, true)}>
+              Export sweep JSON
+            </button>
+          </div>
+          {sweep.progress && <div style={{ marginTop: '8px', fontSize: '12px', color: '#f39c12' }}>⏳ {sweep.progress}</div>}
+        </div>
       </div>
 
       {/* Live frame time */}
@@ -637,6 +725,14 @@ export default function VoxelEnginePrototype() {
           ? <>🖥️ frame <strong>{fmt(frameInfo.avg, 1)} ms</strong> avg · <strong style={{ color: frameInfo.max > 33 ? '#ff6b6b' : 'white' }}>{fmt(frameInfo.max, 1)} ms</strong> worst</>
           : '🖥️ frame –'}
       </div>
+
+      {/* Sweep results */}
+      {sweep.summary.length > 0 && !(bench.idle || bench.results.length > 0) && (
+        <div style={{ ...panel, position: 'absolute', bottom: 20, right: 20, maxWidth: 'calc(100vw - 420px)', maxHeight: '50vh', overflow: 'auto' }}>
+          <strong>Sweep (median over runs, [min–max])</strong>
+          <SweepResults summary={sweep.summary} />
+        </div>
+      )}
 
       {/* Benchmark results */}
       {(bench.idle || bench.results.length > 0) && (

@@ -177,3 +177,40 @@ export function BenchmarkResults({ idle, results }) {
     </>
   );
 }
+
+/** Compact sweep summary: one row per (grid, mode), median with [min–max]. */
+export function SweepResults({ summary }) {
+  const m = (x, d = 1) => (x ? <>{fmt(x.median, d)} <span style={muted}>[{fmt(x.min, d)}–{fmt(x.max, d)}]</span></> : '–');
+  return (
+    <table style={{ borderCollapse: 'collapse', fontSize: '12px', marginTop: '8px' }}>
+      <thead>
+        <tr style={{ color: '#95a5a6', borderBottom: '1px solid #444' }}>
+          <th style={{ ...cell, textAlign: 'left' }}>grid</th>
+          <th style={{ ...cell, textAlign: 'left' }}>mode</th>
+          <th style={cell} title="full meshing of the whole grid">initial ms</th>
+          <th style={cell} title="median meshing time per edit">edit ms</th>
+          <th style={cell}>p99 frame</th>
+          <th style={cell}>hitches</th>
+          <th style={cell} title="median merge-pass GPU time per edit">merge ms</th>
+          <th style={cell}>runs</th>
+        </tr>
+      </thead>
+      <tbody>
+        {summary.map((s) => (
+          <tr key={`${s.gridSize}-${s.mode}`} style={{ borderTop: '1px solid #333' }}>
+            <td style={{ ...cell, textAlign: 'left' }}>{s.gridSize}×{s.gridSize}</td>
+            <td style={{ ...cell, textAlign: 'left' }}>{MODES[s.mode].label}</td>
+            <td style={cell}>{m(s.metrics.initialMs)}</td>
+            <td style={cell}>{m(s.metrics.editMs, 2)}</td>
+            <td style={cell}>{m(s.metrics.frameP99)}</td>
+            <td style={cell}>{m(s.metrics.hitches, 0)}</td>
+            <td style={cell}>{m(s.metrics.pass_merge, 2)}</td>
+            <td style={{ ...cell, color: s.unreliable ? '#ff6b6b' : 'white' }} title={s.unreliable ? `${s.unreliable} run(s) with paused rendering` : ''}>
+              {s.repeats}{s.unreliable ? ' ⚠️' : ''}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
