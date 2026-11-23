@@ -3,17 +3,21 @@
  *
  * Output layout (shared with gpuMeshPipeline.js):
  *   positions : array<vec4f>, 6 vertices per quad, w = face id (0..5: +X -X +Y -Y +Z -Z)
- *   indirect  : [vertexCount, instanceCount, firstVertex, firstInstance, requestedVertices]
+ *   indirect  : [vertexCount, instanceCount, firstVertex, firstInstance, requestedVertices,
+ *                vertexCap]
  *               The first four words are exactly the GPUDrawIndirect argument layout,
  *               so the same buffer can drive drawIndirect() with no CPU involvement.
+ *               vertexCap (written by the CPU, a multiple of 6) is the capacity of
+ *               this target's position buffer, so every chunk's buffer can be sized
+ *               separately without recompiling the shader.
+ *   borders   : 6 bit planes holding the neighbour chunks' touching layers
+ *               (neighbourBorders.js); all zero = neighbours are air.
  *
  * Normals are not written: they are fully determined by the face id, and the
  * material uses flat shading.
  */
-export const createGpuMeshShader = (CHUNK_SIZE, MAX_VERTICES, { mergeWorkgroupSize = 8 } = {}) => {
+export const createGpuMeshShader = (CHUNK_SIZE, { mergeWorkgroupSize = 8 } = {}) => {
     const WORDS_PER_SLICE = (CHUNK_SIZE * CHUNK_SIZE) / 32;
-    // Only whole quads are ever written, so the usable capacity is a multiple of 6.
-    const VERTEX_CAP = Math.floor(MAX_VERTICES / 6) * 6;
 
     // Bit-run merge: one slice per thread, slices staged in workgroup memory with an
     // odd stride so the threads of a workgroup start on different memory banks.
@@ -42,16 +46,17 @@ struct IndirectDrawParams {
     instanceCount: u32,
     firstVertex: u32,
     firstInstance: u32,
-    requestedVertices: atomic<u32>
+    requestedVertices: atomic<u32>,
+    vertexCap: u32
 }
 
 @group(0) @binding(0) var<storage, read> voxels: Voxel;
 @group(0) @binding(1) var<storage, read_write> masks: MaskBuffer;
 @group(0) @binding(2) var<storage, read_write> positions: Vec4Array;
 @group(0) @binding(4) var<storage, read_write> indirectParams: IndirectDrawParams;
+@group(0) @binding(5) var<storage, read> borders: Voxel;
 
 const CHUNK_SIZE: u32 = ${CHUNK_SIZE}u;
-const VERTEX_CAP: u32 = ${VERTEX_CAP}u; // Derived from MAX_VERTICES in JS, so the two cannot drift apart
 const WORDS_PER_SLICE: u32 = ${WORDS_PER_SLICE}u;
 
 fn getVoxel(x: i32, y: i32, z: i32) -> u32 {
@@ -67,6 +72,17 @@ fn getVoxel(x: i32, y: i32, z: i32) -> u32 {
         return 1u;
     }
     return 0u;
+}
+
+// Occupancy of the voxel next to (x, y, z) in direction \`face\`, whose mask cell is
+// (u, v). Inside the chunk it is read directly; outside, from the neighbour's border
+// plane (same u, v), so faces against a solid neighbour are not emitted.
+fn neighbourVoxel(x: i32, y: i32, z: i32, face: u32, u: u32, v: u32) -> u32 {
+    if (x >= 0 && x < i32(CHUNK_SIZE) && y >= 0 && y < i32(CHUNK_SIZE) && z >= 0 && z < i32(CHUNK_SIZE)) {
+        return getVoxel(x, y, z);
+    }
+    let bit = u + v * CHUNK_SIZE;
+    return (borders.data[face * WORDS_PER_SLICE + (bit >> 5u)] >> (bit & 31u)) & 1u;
 }
 
 fn setMaskBit(face: u32, slice: u32, u: u32, v: u32) {
@@ -97,17 +113,17 @@ fn mask_main(@builtin(global_invocation_id) global_id: vec3u) {
     let ux = u32(x); let uy = u32(y); let uz = u32(z);
 
     // Face 0: +X (Right) -> slice x, u=y, v=z
-    if (getVoxel(x + 1, y, z) == 0u) { setMaskBit(0u, ux, uy, uz); }
+    if (neighbourVoxel(x + 1, y, z, 0u, uy, uz) == 0u) { setMaskBit(0u, ux, uy, uz); }
     // Face 1: -X (Left) -> slice x, u=y, v=z
-    if (getVoxel(x - 1, y, z) == 0u) { setMaskBit(1u, ux, uy, uz); }
+    if (neighbourVoxel(x - 1, y, z, 1u, uy, uz) == 0u) { setMaskBit(1u, ux, uy, uz); }
     // Face 2: +Y (Top) -> slice y, u=x, v=z
-    if (getVoxel(x, y + 1, z) == 0u) { setMaskBit(2u, uy, ux, uz); }
+    if (neighbourVoxel(x, y + 1, z, 2u, ux, uz) == 0u) { setMaskBit(2u, uy, ux, uz); }
     // Face 3: -Y (Bottom) -> slice y, u=x, v=z
-    if (getVoxel(x, y - 1, z) == 0u) { setMaskBit(3u, uy, ux, uz); }
+    if (neighbourVoxel(x, y - 1, z, 3u, ux, uz) == 0u) { setMaskBit(3u, uy, ux, uz); }
     // Face 4: +Z (Front) -> slice z, u=x, v=y
-    if (getVoxel(x, y, z + 1) == 0u) { setMaskBit(4u, uz, ux, uy); }
+    if (neighbourVoxel(x, y, z + 1, 4u, ux, uy) == 0u) { setMaskBit(4u, uz, ux, uy); }
     // Face 5: -Z (Back) -> slice z, u=x, v=y
-    if (getVoxel(x, y, z - 1) == 0u) { setMaskBit(5u, uz, ux, uy); }
+    if (neighbourVoxel(x, y, z - 1, 5u, ux, uy) == 0u) { setMaskBit(5u, uz, ux, uy); }
 }
 
 // --- PASS B: GREEDY MERGING ---
@@ -115,7 +131,7 @@ fn emitQuad(corners: array<vec4f, 4>) {
     let base = atomicAdd(&indirectParams.vertexCount, 6u);
     // The counter keeps counting past the cap so finalize_main can report how much
     // was requested; a quad is only written if all six of its vertices fit.
-    if (base + 6u > VERTEX_CAP) { return; }
+    if (base + 6u > indirectParams.vertexCap) { return; }
 
     // Triangle 1
     positions.data[base + 0u] = corners[0];
@@ -374,8 +390,8 @@ fn merge_bitrun_main(@builtin(workgroup_id) wg: vec3u, @builtin(local_invocation
 fn finalize_main() {
     let total = atomicLoad(&indirectParams.vertexCount);
     atomicStore(&indirectParams.requestedVertices, total);
-    if (total > VERTEX_CAP) {
-        atomicStore(&indirectParams.vertexCount, VERTEX_CAP);
+    if (total > indirectParams.vertexCap) {
+        atomicStore(&indirectParams.vertexCount, indirectParams.vertexCap);
     }
 }
 `;
