@@ -1,5 +1,6 @@
 import * as THREE from 'three/webgpu';
-import { MAX_VERTICES, INDIRECT_WORDS } from '../meshing/gpuMeshPipeline';
+import { CHUNK_SIZE } from '../voxel/ChunkData';
+import { DEFAULT_CAPACITY, INDIRECT_WORDS, POSITION_STRIDE_BYTES } from '../meshing/gpuMeshPipeline';
 
 // Mirrors AttributeType in three/src/renderers/common/Constants.js (not part of
 // Three's public API, so duplicated here). Verified against three@0.185.1.
@@ -34,9 +35,11 @@ export class DirectRenderBridge {
 
   /**
    * @param {THREE.Material} material
-   * @returns {{ mesh: THREE.Mesh, target: {positions: GPUBuffer, indirect: GPUBuffer}, dispose: () => void }}
+   * @param {number} [capacity]  vertex capacity of the position buffer (multiple of 6)
+   * @returns {{ mesh: THREE.Mesh, target: {positions: GPUBuffer, indirect: GPUBuffer, capacity: number},
+   *             gpuBytes: number, dispose: () => void }}
    */
-  createDirectMesh(material) {
+  createDirectMesh(material, capacity = DEFAULT_CAPACITY) {
     if (!this.isWebGPU) {
       throw new Error(
         'Direct rendering needs the WebGPU backend, but THREE.WebGPURenderer fell back to WebGL2.'
@@ -45,7 +48,7 @@ export class DirectRenderBridge {
 
     // vec4 per vertex (xyz + face id). Three pads vec3 storage attributes to vec4
     // anyway, so declaring 4 up front keeps the layout under our control.
-    const positions = new THREE.StorageBufferAttribute(MAX_VERTICES, 4);
+    const positions = new THREE.StorageBufferAttribute(capacity, 4);
 
     // Initial draw args [0 vertices, 1 instance, 0, 0]: valid to draw (nothing)
     // before the first compute pass has run.
@@ -55,6 +58,11 @@ export class DirectRenderBridge {
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', positions);
     geometry.setIndirect(indirect);
+    // The vertices only exist on the GPU, so give Three the bounds instead of letting
+    // it compute them from the CPU array: every vertex lies in the chunk's local cube.
+    // This also lets each chunk be frustum-culled.
+    geometry.boundingBox = new THREE.Box3(new THREE.Vector3(0, 0, 0), new THREE.Vector3(CHUNK_SIZE, CHUNK_SIZE, CHUNK_SIZE));
+    geometry.boundingSphere = geometry.boundingBox.getBoundingSphere(new THREE.Sphere());
 
     // Allocate the GPU buffers now (instead of on first render) so compute can bind
     // them. Going through Attributes.update() also records that the buffers exist,
@@ -67,6 +75,7 @@ export class DirectRenderBridge {
     attributes.update(indirect, ATTRIBUTE_TYPE_INDIRECT);
 
     const target = {
+      capacity,
       positions: this.renderer.backend.get(positions)?.buffer,
       indirect: this.renderer.backend.get(indirect)?.buffer,
     };
@@ -74,12 +83,23 @@ export class DirectRenderBridge {
       throw new Error('Could not obtain GPUBuffers from Three (internal API changed?).');
     }
 
+    // Drop the CPU shadow array. Three needs it only to size and fill the GPU buffer
+    // at creation; afterwards it reads `array` again only on a version bump (we never
+    // set needsUpdate: compute writes the buffer) or for wireframe index generation
+    // (not used). Verified against three@0.185.1 (WebGPUAttributeUtils.createAttribute,
+    // Geometries.getWireframeIndex). Keeping the same typed-array type keeps the vertex
+    // format Three derives from it (float32x4). Saves capacity * 16 bytes of CPU
+    // memory per chunk (6 MB at the default capacity; it was 8 MB per chunk before).
+    positions.array = new Float32Array(4);
+
     const mesh = new THREE.Mesh(geometry, material);
     mesh.name = 'voxelMesh';
-    // The CPU-side position array is all zeros, so Three would compute a degenerate
-    // bounding sphere and frustum-cull the mesh. The real extent only exists on the GPU.
-    mesh.frustumCulled = false;
 
-    return { mesh, target, dispose: () => geometry.dispose() };
+    return {
+      mesh,
+      target,
+      gpuBytes: capacity * POSITION_STRIDE_BYTES + INDIRECT_WORDS * 4,
+      dispose: () => geometry.dispose(),
+    };
   }
 }

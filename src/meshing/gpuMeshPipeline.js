@@ -2,21 +2,30 @@ import * as THREE from 'three/webgpu';
 import { CHUNK_SIZE } from '../voxel/ChunkData';
 import { createGpuMeshShader } from './gpuMeshShader';
 import { getGpuDevice, hasTimestampQuery } from '../gpu/gpuContext';
-
-// Right-size the output buffers. Greedy meshing on a 96^3 chunk typically
-// produces ~50-60K quads = ~300-360K vertices. 500K vertices gives headroom.
-// The shader derives its write cap from the same value.
-export const MAX_VERTICES = 500000;
+import { buildBorderPlanes, BORDER_WORDS } from './neighbourBorders.js';
 
 // 6 vertices of vec4f per quad (xyz position, w = face id)
 export const POSITION_STRIDE_BYTES = 16;
 
-// [vertexCount, instanceCount, firstVertex, firstInstance, requestedVertices, pad x3]
+// Output buffers are sized per chunk and grown when a mesh overflows them (see
+// growCapacity). The default fits the default terrain (50,112 quads = 300,672
+// vertices) with headroom, so dense chunks never need a second pass; sparse
+// chunks could start smaller, but one size keeps the first mesh of every chunk
+// single-pass. Capacities are in vertices and always a multiple of 6 (whole quads).
+const CAPACITY_STEP = 6 * 16384; // 98,304 vertices = 1.5 MB
+export const DEFAULT_CAPACITY = 4 * CAPACITY_STEP; // 393,216 vertices = 6 MB
+export const MAX_CAPACITY = 16 * CAPACITY_STEP; // 1,572,864 vertices = 24 MB
+
+/** Capacity for a target that needed `requestedVertices`: 25% headroom, whole steps, capped. */
+export function growCapacity(requestedVertices) {
+  const steps = Math.ceil((requestedVertices * 1.25) / CAPACITY_STEP);
+  return Math.min(MAX_CAPACITY, Math.max(DEFAULT_CAPACITY, steps * CAPACITY_STEP));
+}
+
+// [vertexCount, instanceCount, firstVertex, firstInstance, requestedVertices, vertexCap, pad x2]
 // The first 4 words are the drawIndirect() argument layout.
 export const INDIRECT_WORDS = 8;
 const INDIRECT_BYTES = INDIRECT_WORDS * 4;
-const INDIRECT_INITIAL = new Uint32Array(INDIRECT_WORDS);
-INDIRECT_INITIAL[1] = 1; // instanceCount
 
 const WORDS_PER_SLICE = (CHUNK_SIZE * CHUNK_SIZE) / 32;
 const MASK_BUFFER_SIZE = 6 * CHUNK_SIZE * WORDS_PER_SLICE * 4;
@@ -40,8 +49,9 @@ export function mergeOptionsFromUrl(search = globalThis.location?.search ?? '') 
 }
 
 /**
- * A mesh target is the pair of GPU buffers the compute passes write into:
- *   { positions: GPUBuffer (STORAGE), indirect: GPUBuffer (STORAGE | COPY_DST) }
+ * A mesh target is the pair of GPU buffers the compute passes write into, plus the
+ * vertex capacity of `positions`:
+ *   { positions: GPUBuffer (STORAGE), indirect: GPUBuffer (STORAGE | COPY_DST), capacity }
  * For the readback path we own these buffers; for the direct path they are the
  * buffers backing a Three.js geometry (see DirectRenderBridge).
  */
@@ -69,12 +79,20 @@ export class GpuMesher {
       size: MASK_BUFFER_SIZE,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
+    // Neighbour border planes for the chunk being meshed (6.75 KB), rewritten per mesh.
+    this._borders = new Uint32Array(BORDER_WORDS);
+    this._bordersBuffer = device.createBuffer({
+      size: this._borders.byteLength,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    });
+    this._bordersEmpty = true; // GPU copy is all zeros (fresh buffers are zeroed)
+    this._indirectInit = new Uint32Array(INDIRECT_WORDS);
   }
 
   // Pipelines are built up front so the first measured run is not a compile.
   async _createPipelines() {
     const module = this.device.createShaderModule({
-      code: createGpuMeshShader(CHUNK_SIZE, MAX_VERTICES, { mergeWorkgroupSize: this.mergeWorkgroupSize }),
+      code: createGpuMeshShader(CHUNK_SIZE, { mergeWorkgroupSize: this.mergeWorkgroupSize }),
     });
     const make = (entryPoint) =>
       this.device.createComputePipelineAsync({ layout: 'auto', compute: { module, entryPoint } });
@@ -92,17 +110,23 @@ export class GpuMesher {
     };
   }
 
+  /** Bytes of shared scratch buffers (slice masks + neighbour border planes). */
+  get scratchBytes() {
+    return MASK_BUFFER_SIZE + this._borders.byteLength;
+  }
+
   /** Frees the GPU mirror of a chunk that will not be meshed again. */
   releaseChunk(chunk) {
     this._voxelBuffers.get(chunk)?.destroy();
     this._voxelBuffers.delete(chunk);
   }
 
-  /** Buffers for the CPU-readback path. Caller owns them. */
-  createReadbackTarget() {
+  /** Buffers for the CPU-readback path. Caller owns them (see destroyTarget). */
+  createReadbackTarget(capacity = DEFAULT_CAPACITY) {
     return {
+      capacity,
       positions: this.device.createBuffer({
-        size: MAX_VERTICES * POSITION_STRIDE_BYTES,
+        size: capacity * POSITION_STRIDE_BYTES,
         usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
       }),
       indirect: this.device.createBuffer({
@@ -110,6 +134,25 @@ export class GpuMesher {
         usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
       }),
     };
+  }
+
+  destroyTarget(target) {
+    target.positions.destroy();
+    target.indirect.destroy();
+  }
+
+  /**
+   * Uploads the neighbour border planes for the next mesh. Skipped when the chunk has
+   * no neighbours and the GPU copy is already zero (single-chunk case).
+   * @returns {number} bytes uploaded
+   */
+  _syncBorders(neighbours) {
+    const hasNeighbours = !!neighbours && neighbours.some(Boolean);
+    if (!hasNeighbours && this._bordersEmpty) return 0;
+    buildBorderPlanes(hasNeighbours ? neighbours : [null, null, null, null, null, null], this._borders);
+    this.device.queue.writeBuffer(this._bordersBuffer, 0, this._borders);
+    this._bordersEmpty = !hasNeighbours;
+    return this._borders.byteLength;
   }
 
   /**
@@ -150,20 +193,28 @@ export class GpuMesher {
    *
    * @returns {{ submitMs: number, uploadedBytes: number, gpuMs: Promise<{totalMs: number, passMs: Object<string, number>}|null> }}
    *   submitMs      - CPU time spent encoding and submitting.
-   *   uploadedBytes - occupancy bytes sent CPU -> GPU for this call (dirty range only).
+   *   uploadedBytes - bytes sent CPU -> GPU for this call: the occupancy dirty range,
+   *                   plus 6,912 bytes of neighbour border planes when the chunk
+   *                   has neighbours.
+   *   opts.neighbours - the chunk's 6 neighbours (ChunkManager.neighbours), or null.
    *   gpuMs         - GPU execution time from timestamp queries, total and per pass
    *                   keyed by pass name { mask, merge, finalize } (null if
    *                   unsupported or `profile` is false). Reads back 16 bytes of
    *                   timestamps per pass only.
    */
-  mesh(chunk, target, { profile = false, mergeImpl = this.mergeImpl } = {}) {
+  mesh(chunk, target, { profile = false, mergeImpl = this.mergeImpl, neighbours = null } = {}) {
     const device = this.device;
     const t0 = performance.now();
     const merge = this._merge[mergeImpl];
     if (!merge) throw new Error(`Unknown mergeImpl "${mergeImpl}"`);
 
-    const { buffer: voxelBuffer, uploadedBytes } = this._syncVoxelBuffer(chunk);
-    device.queue.writeBuffer(target.indirect, 0, INDIRECT_INITIAL);
+    const { buffer: voxelBuffer, uploadedBytes: voxelBytes } = this._syncVoxelBuffer(chunk);
+    const uploadedBytes = voxelBytes + this._syncBorders(neighbours);
+    const init = this._indirectInit;
+    init.fill(0);
+    init[1] = 1; // instanceCount
+    init[5] = target.capacity; // vertexCap
+    device.queue.writeBuffer(target.indirect, 0, init);
 
     const bind = (pipeline, entries) =>
       device.createBindGroup({ layout: pipeline.getBindGroupLayout(0), entries });
@@ -171,6 +222,7 @@ export class GpuMesher {
     const maskGroup = bind(this._maskPipeline, [
       { binding: 0, resource: { buffer: voxelBuffer } },
       { binding: 1, resource: { buffer: this._maskBuffer } },
+      { binding: 5, resource: { buffer: this._bordersBuffer } },
     ]);
     const mergeGroup = bind(merge.pipeline, [
       { binding: 1, resource: { buffer: this._maskBuffer } },
@@ -281,6 +333,7 @@ export class GpuMesher {
     return {
       vertexCount,
       quadCount: vertexCount / 6,
+      requestedVertices,
       overflowed: requestedVertices > vertexCount,
     };
   }
@@ -309,11 +362,11 @@ export class GpuMesher {
    * THREE.BufferGeometry. Kept as the "GPU + readback" benchmark mode so the cost
    * of the readback can be compared against the zero-copy path.
    */
-  async meshWithReadback(chunk, target) {
+  async meshWithReadback(chunk, target, opts = {}) {
     const device = this.device;
     const start = performance.now();
 
-    const { submitMs, uploadedBytes, gpuMs } = this.mesh(chunk, target, { profile: true });
+    const { submitMs, uploadedBytes, gpuMs } = this.mesh(chunk, target, { ...opts, profile: true });
 
     // Mapping the counter waits for the compute work to finish.
     const counters = await this.readCounters(target);
