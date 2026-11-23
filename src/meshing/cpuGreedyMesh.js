@@ -1,7 +1,13 @@
 import * as THREE from 'three/webgpu';
 import { CHUNK_SIZE } from '../voxel/ChunkData';
 
-export function cpuGreedyMeshGeneration(chunk) {
+/**
+ * @param {import('../voxel/ChunkData').ChunkData} chunk
+ * @param {Array<import('../voxel/ChunkData').ChunkData|null>} [neighbours]  6 chunks in
+ *   face order +X -X +Y -Y +Z -Z (see ChunkManager.neighbours). A face on the chunk
+ *   border is only emitted if the neighbouring voxel is air; missing neighbours = air.
+ */
+export function cpuGreedyMeshGeneration(chunk, neighbours = null) {
   const start = performance.now();
   
   const vertices = [];
@@ -72,9 +78,17 @@ export function cpuGreedyMeshGeneration(chunk) {
     }
   ];
 
+  const S = CHUNK_SIZE;
   const getVoxel = (x, y, z) => {
-    if (x < 0 || x >= CHUNK_SIZE || y < 0 || y >= CHUNK_SIZE || z < 0 || z >= CHUNK_SIZE) return 0;
-    return chunk.get(x, y, z);
+    if (x >= 0 && x < S && y >= 0 && y < S && z >= 0 && z < S) return chunk.get(x, y, z);
+    if (!neighbours) return 0;
+    // Face neighbours only ever step one voxel out along one axis.
+    if (x >= S) return neighbours[0]?.get(x - S, y, z) ?? 0;
+    if (x < 0) return neighbours[1]?.get(x + S, y, z) ?? 0;
+    if (y >= S) return neighbours[2]?.get(x, y - S, z) ?? 0;
+    if (y < 0) return neighbours[3]?.get(x, y + S, z) ?? 0;
+    if (z >= S) return neighbours[4]?.get(x, y, z - S) ?? 0;
+    return neighbours[5]?.get(x, y, z + S) ?? 0;
   };
 
   for (const face of faces) {

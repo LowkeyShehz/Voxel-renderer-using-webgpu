@@ -1,4 +1,5 @@
 import { CHUNK_SIZE } from '../voxel/ChunkData.js';
+import { borderBit } from './neighbourBorders.js';
 
 /**
  * JS reference for the GPU "bit-run" greedy merge (merge_bitrun_main in
@@ -95,27 +96,34 @@ export function mergeSliceBitRuns(mask, offset, emit) {
 }
 
 /**
- * JS port of mask_main: per-face exposure masks for a chunk, with everything
- * outside the chunk treated as air.
+ * JS port of mask_main: per-face exposure masks for a chunk. A neighbour voxel
+ * outside the chunk is read from the border planes (see neighbourBorders.js), or is
+ * air when `borders` is null.
  * @param {import('../voxel/ChunkData.js').ChunkData} chunk
+ * @param {Uint32Array|null} [borders]  from buildBorderPlanes()
  */
-export function buildFaceMasks(chunk) {
+export function buildFaceMasks(chunk, borders = null) {
   const N = CHUNK_SIZE;
   const masks = new Uint32Array(6 * N * WORDS_PER_SLICE);
   const set = (face, slice, u, v) => {
     const bit = u + v * N;
     masks[face * N * WORDS_PER_SLICE + slice * WORDS_PER_SLICE + (bit >> 5)] |= 1 << (bit & 31);
   };
+  // Same as the WGSL neighbourVoxel(): inside the chunk read it, outside use the plane.
+  const nb = (x, y, z, face, u, v) => {
+    if (x >= 0 && x < N && y >= 0 && y < N && z >= 0 && z < N) return chunk.get(x, y, z);
+    return borders ? borderBit(borders, face, u, v) : 0;
+  };
   for (let z = 0; z < N; z++) {
     for (let y = 0; y < N; y++) {
       for (let x = 0; x < N; x++) {
         if (!chunk.get(x, y, z)) continue;
-        if (!chunk.get(x + 1, y, z)) set(0, x, y, z);
-        if (!chunk.get(x - 1, y, z)) set(1, x, y, z);
-        if (!chunk.get(x, y + 1, z)) set(2, y, x, z);
-        if (!chunk.get(x, y - 1, z)) set(3, y, x, z);
-        if (!chunk.get(x, y, z + 1)) set(4, z, x, y);
-        if (!chunk.get(x, y, z - 1)) set(5, z, x, y);
+        if (!nb(x + 1, y, z, 0, y, z)) set(0, x, y, z);
+        if (!nb(x - 1, y, z, 1, y, z)) set(1, x, y, z);
+        if (!nb(x, y + 1, z, 2, x, z)) set(2, y, x, z);
+        if (!nb(x, y - 1, z, 3, x, z)) set(3, y, x, z);
+        if (!nb(x, y, z + 1, 4, x, y)) set(4, z, x, y);
+        if (!nb(x, y, z - 1, 5, x, y)) set(5, z, x, y);
       }
     }
   }
@@ -139,11 +147,11 @@ export function quadCorners(face, s, u, v, w, h) {
 }
 
 /**
- * Meshes a whole chunk with the bit-run merge.
+ * Meshes a whole chunk with the bit-run merge (`borders` as in buildFaceMasks).
  * @returns {Array<{face:number, slice:number, u:number, v:number, w:number, h:number}>}
  */
-export function bitGreedyMesh(chunk) {
-  const masks = buildFaceMasks(chunk);
+export function bitGreedyMesh(chunk, borders = null) {
+  const masks = buildFaceMasks(chunk, borders);
   const quads = [];
   for (let face = 0; face < 6; face++) {
     for (let slice = 0; slice < CHUNK_SIZE; slice++) {
