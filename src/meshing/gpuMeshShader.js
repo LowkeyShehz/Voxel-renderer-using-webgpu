@@ -10,10 +10,19 @@
  * Normals are not written: they are fully determined by the face id, and the
  * material uses flat shading.
  */
-export const createGpuMeshShader = (CHUNK_SIZE, MAX_VERTICES) => {
+export const createGpuMeshShader = (CHUNK_SIZE, MAX_VERTICES, { mergeWorkgroupSize = 8 } = {}) => {
     const WORDS_PER_SLICE = (CHUNK_SIZE * CHUNK_SIZE) / 32;
     // Only whole quads are ever written, so the usable capacity is a multiple of 6.
     const VERTEX_CAP = Math.floor(MAX_VERTICES / 6) * 6;
+
+    // Bit-run merge: one slice per thread, slices staged in workgroup memory with an
+    // odd stride so the threads of a workgroup start on different memory banks.
+    const SLICE_STRIDE = WORDS_PER_SLICE + 1;
+    const MERGE_WG = mergeWorkgroupSize;
+    if (CHUNK_SIZE !== 96) throw new Error('merge_bitrun_main assumes CHUNK_SIZE = 96 (3 words per row)');
+    if (!Number.isInteger(MERGE_WG) || MERGE_WG < 1 || MERGE_WG * SLICE_STRIDE * 4 > 16384) {
+        throw new Error(`mergeWorkgroupSize ${MERGE_WG} must be 1..${Math.floor(16384 / (SLICE_STRIDE * 4))} (16 KB workgroup storage)`);
+    }
 
     return `
 struct Voxel {
@@ -239,6 +248,119 @@ fn merge_main(@builtin(global_invocation_id) global_id: vec3u) {
                 }
 
                 emitQuad(corners);
+            }
+        }
+    }
+}
+
+// --- PASS B (bit-run): GREEDY MERGING ---
+// Line-for-line port of mergeSliceBitRuns() in bitGreedyMerge.js, which the unit
+// tests check against the CPU mesher (same quads). merge_main above is kept as the
+// legacy A/B baseline (?mergeImpl=legacy).
+//
+// Differences from merge_main:
+//   - each row (3 words) is scanned with countTrailingZeros instead of cell by cell,
+//     and a quad grows down by ANDing whole words against per-word run masks;
+//   - the slice lives in workgroup memory, not a 288-word private array;
+//   - one slice per thread with a small workgroup, so 576 / MERGE_WG workgroups are
+//     spread over the GPU instead of 6.
+const ROW_WORDS: u32 = 3u;
+const MERGE_WG: u32 = ${MERGE_WG}u;
+const SLICE_STRIDE: u32 = ${SLICE_STRIDE}u;
+const SLICE_COUNT: u32 = 6u * CHUNK_SIZE;
+
+var<workgroup> sliceMasks: array<u32, ${MERGE_WG * SLICE_STRIDE}>;
+
+// Bits of row word k that fall inside [u0, u1).
+fn rangeMask(k: u32, u0: u32, u1: u32) -> u32 {
+    if (u1 <= k * 32u || u0 >= k * 32u + 32u) { return 0u; }
+    let lo = max(u0, k * 32u) - k * 32u; // 0..31
+    let hi = min(u1, k * 32u + 32u) - k * 32u; // lo+1..32
+    return (0xFFFFFFFFu >> (32u - hi)) & (0xFFFFFFFFu << lo);
+}
+
+// Length of the run of set bits starting at u in the row whose first word is rowBase.
+fn runLength(rowBase: u32, u: u32) -> u32 {
+    var w = 0u;
+    var k = u >> 5u;
+    var b = u & 31u;
+    loop {
+        if (k >= ROW_WORDS) { break; }
+        // Shifting zero-fills the top, so the inverted word ends the run by bit 32 - b.
+        let run = countTrailingZeros(~(sliceMasks[rowBase + k] >> b));
+        w += run;
+        if (run < 32u - b) { break; }
+        k++;
+        b = 0u;
+    }
+    return w;
+}
+
+fn emitFaceQuad(face: u32, slice: u32, u: u32, v: u32, w: u32, h: u32) {
+    let fw = f32(face);
+    let s = f32(slice);
+    let fu = f32(u); let fv = f32(v);
+    let uw = f32(u + w); let vh = f32(v + h);
+    var c: array<vec4f, 4>;
+    switch face {
+        case 0u: { c = array<vec4f, 4>(vec4f(s + 1.0, fu, fv, fw), vec4f(s + 1.0, uw, fv, fw), vec4f(s + 1.0, uw, vh, fw), vec4f(s + 1.0, fu, vh, fw)); }
+        case 1u: { c = array<vec4f, 4>(vec4f(s, fu, vh, fw), vec4f(s, uw, vh, fw), vec4f(s, uw, fv, fw), vec4f(s, fu, fv, fw)); }
+        case 2u: { c = array<vec4f, 4>(vec4f(fu, s + 1.0, fv, fw), vec4f(fu, s + 1.0, vh, fw), vec4f(uw, s + 1.0, vh, fw), vec4f(uw, s + 1.0, fv, fw)); }
+        case 3u: { c = array<vec4f, 4>(vec4f(fu, s, vh, fw), vec4f(fu, s, fv, fw), vec4f(uw, s, fv, fw), vec4f(uw, s, vh, fw)); }
+        case 4u: { c = array<vec4f, 4>(vec4f(uw, fv, s + 1.0, fw), vec4f(uw, vh, s + 1.0, fw), vec4f(fu, vh, s + 1.0, fw), vec4f(fu, fv, s + 1.0, fw)); }
+        default: { c = array<vec4f, 4>(vec4f(fu, fv, s, fw), vec4f(fu, vh, s, fw), vec4f(uw, vh, s, fw), vec4f(uw, fv, s, fw)); }
+    }
+    emitQuad(c);
+}
+
+@compute @workgroup_size(${MERGE_WG})
+fn merge_bitrun_main(@builtin(workgroup_id) wg: vec3u, @builtin(local_invocation_index) lid: u32) {
+    // Slice index = face * CHUNK_SIZE + slice. A workgroup's slices are consecutive in
+    // the mask buffer, so load them together (adjacent threads read adjacent words).
+    let first = wg.x * MERGE_WG;
+    for (var i = lid; i < MERGE_WG * WORDS_PER_SLICE; i += MERGE_WG) {
+        let t = i / WORDS_PER_SLICE;
+        if (first + t < SLICE_COUNT) {
+            sliceMasks[t * SLICE_STRIDE + i % WORDS_PER_SLICE] = atomicLoad(&masks.data[first * WORDS_PER_SLICE + i]);
+        }
+    }
+    workgroupBarrier();
+
+    let idx = first + lid;
+    if (idx >= SLICE_COUNT) { return; }
+    let face = idx / CHUNK_SIZE;
+    let slice = idx % CHUNK_SIZE;
+    let base = lid * SLICE_STRIDE;
+
+    for (var v = 0u; v < CHUNK_SIZE; v++) {
+        let rowBase = base + v * ROW_WORDS;
+        for (var k = 0u; k < ROW_WORDS; k++) {
+            // Each quad clears its own cells, so this loop ends once the word is empty.
+            loop {
+                let word = sliceMasks[rowBase + k];
+                if (word == 0u) { break; }
+                let u = k * 32u + countTrailingZeros(word);
+                let w = runLength(rowBase, u);
+                let m0 = rangeMask(0u, u, u + w);
+                let m1 = rangeMask(1u, u, u + w);
+                let m2 = rangeMask(2u, u, u + w);
+
+                var h = 1u;
+                loop {
+                    if (v + h >= CHUNK_SIZE) { break; }
+                    let r = rowBase + h * ROW_WORDS;
+                    if ((sliceMasks[r] & m0) != m0 || (sliceMasks[r + 1u] & m1) != m1 || (sliceMasks[r + 2u] & m2) != m2) { break; }
+                    h++;
+                }
+
+                for (var dv = 0u; dv < h; dv++) {
+                    let r = rowBase + dv * ROW_WORDS;
+                    sliceMasks[r] &= ~m0;
+                    sliceMasks[r + 1u] &= ~m1;
+                    sliceMasks[r + 2u] &= ~m2;
+                }
+
+                emitFaceQuad(face, slice, u, v, w, h);
             }
         }
     }

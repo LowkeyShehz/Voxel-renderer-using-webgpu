@@ -15,8 +15,9 @@ import { CHUNK_SIZE } from '../voxel/ChunkData.js';
 export const WORDS_PER_SLICE = (CHUNK_SIZE * CHUNK_SIZE) / 32;
 export const ROW_WORDS = CHUNK_SIZE / 32;
 
-if (!Number.isInteger(ROW_WORDS)) {
-  throw new Error('bit-run merge needs CHUNK_SIZE to be a multiple of 32');
+// The merge tests a row as exactly three words (m0, m1, m2 below and in the WGSL).
+if (ROW_WORDS !== 3) {
+  throw new Error('bit-run merge assumes CHUNK_SIZE = 96 (3 words per row)');
 }
 
 /** countTrailingZeros() for a u32, 32 for 0 (same as WGSL). */
@@ -25,13 +26,16 @@ export function ctz(x) {
   return x === 0 ? 32 : 31 - Math.clz32(x & -x);
 }
 
-/** Bits of row word k (k = 0..ROW_WORDS-1) that fall inside [u0, u1). */
+/**
+ * Bits of row word k (k = 0..ROW_WORDS-1) that fall inside [u0, u1).
+ * Written the way the WGSL needs it: the early return avoids u32 underflow, and
+ * both shifts stay below 32.
+ */
 export function rangeMask(k, u0, u1) {
-  const lo = Math.max(u0, k * 32) - k * 32;
-  const hi = Math.min(u1, k * 32 + 32) - k * 32;
-  if (hi <= lo) return 0;
-  const upper = hi === 32 ? 0xffffffff : ((1 << hi) - 1) >>> 0;
-  return (upper & ~((1 << lo) - 1)) >>> 0;
+  if (u1 <= k * 32 || u0 >= k * 32 + 32) return 0;
+  const lo = Math.max(u0, k * 32) - k * 32; // 0..31
+  const hi = Math.min(u1, k * 32 + 32) - k * 32; // lo+1..32
+  return ((0xffffffff >>> (32 - hi)) & (0xffffffff << lo)) >>> 0;
 }
 
 /** Length of the run of set bits starting at u in the row whose first word is rowBase. */
