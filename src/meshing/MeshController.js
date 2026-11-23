@@ -325,26 +325,28 @@ export class MeshController {
    * chunks).
    */
   remeshDirty(mode) {
-    if (!this._inflight) {
-      this._inflight = (async () => {
-        const t0 = performance.now();
-        const results = [];
-        try {
-          let chunk;
-          while ((chunk = this.world.dirtyChunks[0])) {
-            if (results.length > 0) await nextFrame();
-            this.world.clearDirty(chunk); // before meshing, so edits during it re-mark it
-            const r = await this.meshChunk(chunk, mode);
-            this.showChunk(r, mode);
-            results.push(r);
-          }
-        } finally {
-          this._inflight = null;
-        }
-        return { ...combine(results), wallMs: performance.now() - t0 };
-      })();
-    }
-    return this._inflight;
+    if (this._inflight) return this._inflight;
+    const run = (async () => {
+      const t0 = performance.now();
+      const results = [];
+      let chunk;
+      while ((chunk = this.world.dirtyChunks[0])) {
+        if (results.length > 0) await nextFrame();
+        this.world.clearDirty(chunk); // before meshing, so edits during it re-mark it
+        const r = await this.meshChunk(chunk, mode);
+        this.showChunk(r, mode);
+        results.push(r);
+      }
+      return { ...combine(results), wallMs: performance.now() - t0 };
+    })();
+    // Cleared by identity once settled. (With nothing dirty the body finishes before
+    // `run` is assigned, so clearing from inside it would leave a stale promise.)
+    this._inflight = run;
+    const clear = () => {
+      if (this._inflight === run) this._inflight = null;
+    };
+    run.then(clear, clear);
+    return run;
   }
 
   _releaseWorld() {
