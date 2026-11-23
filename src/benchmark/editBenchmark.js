@@ -1,6 +1,6 @@
 import { CHUNK_SIZE } from '../voxel/ChunkData';
 import { FrameRecorder } from './FrameRecorder';
-import { mean, median, percentile, max, summarizeFrames } from './stats';
+import { mean, median, percentile, max, summarizeFrames, medianPassMs } from './stats';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -96,9 +96,7 @@ export async function runEditBenchmark({ controller, recorder, mode, edits, inte
       max: max(perEdit.map((r) => r.totalMs)),
     },
     gpuMs: median(perEdit.map((r) => r.gpuMs)),
-    passMs: perEdit[0]?.passMs
-      ? [0, 1, 2].map((i) => median(perEdit.map((r) => r.passMs?.[i])))
-      : null,
+    passMs: medianPassMs(perEdit),
     bytesUpPerEdit: mean(perEdit.map((r) => r.bytesUp)),
     bytesDownPerEdit: mean(perEdit.map((r) => r.bytesDown)),
   };

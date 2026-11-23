@@ -21,6 +21,24 @@ INDIRECT_INITIAL[1] = 1; // instanceCount
 const WORDS_PER_SLICE = (CHUNK_SIZE * CHUNK_SIZE) / 32;
 const MASK_BUFFER_SIZE = 6 * CHUNK_SIZE * WORDS_PER_SLICE * 4;
 
+/** Merge-pass implementations (`?mergeImpl=` in the URL picks the default). */
+export const MERGE_IMPLS = ['bitrun', 'legacy'];
+export const DEFAULT_MERGE_WG = 8;
+
+/**
+ * Reads `?mergeImpl=legacy|bitrun` and `?mergeWG=<threads>` from the page URL so the
+ * merge passes can be A/B tested without a rebuild.
+ */
+export function mergeOptionsFromUrl(search = globalThis.location?.search ?? '') {
+  const params = new URLSearchParams(search);
+  const impl = params.get('mergeImpl');
+  const wg = Number(params.get('mergeWG'));
+  return {
+    mergeImpl: MERGE_IMPLS.includes(impl) ? impl : 'bitrun',
+    mergeWorkgroupSize: Number.isInteger(wg) && wg > 0 ? wg : DEFAULT_MERGE_WG,
+  };
+}
+
 /**
  * A mesh target is the pair of GPU buffers the compute passes write into:
  *   { positions: GPUBuffer (STORAGE), indirect: GPUBuffer (STORAGE | COPY_DST) }
@@ -28,15 +46,23 @@ const MASK_BUFFER_SIZE = 6 * CHUNK_SIZE * WORDS_PER_SLICE * 4;
  * buffers backing a Three.js geometry (see DirectRenderBridge).
  */
 export class GpuMesher {
-  static async create() {
+  /**
+   * @param {{ mergeImpl?: 'bitrun'|'legacy', mergeWorkgroupSize?: number }} [opts]
+   *   mergeImpl is the default for mesh(); both merge pipelines are always built so
+   *   the correctness check can run each of them.
+   */
+  static async create({ mergeImpl = 'bitrun', mergeWorkgroupSize = DEFAULT_MERGE_WG } = {}) {
     const device = await getGpuDevice();
-    const mesher = new GpuMesher(device);
+    const mesher = new GpuMesher(device, { mergeImpl, mergeWorkgroupSize });
     await mesher._createPipelines();
     return mesher;
   }
 
-  constructor(device) {
+  constructor(device, { mergeImpl = 'bitrun', mergeWorkgroupSize = DEFAULT_MERGE_WG } = {}) {
+    if (!MERGE_IMPLS.includes(mergeImpl)) throw new Error(`Unknown mergeImpl "${mergeImpl}"`);
     this.device = device;
+    this.mergeImpl = mergeImpl;
+    this.mergeWorkgroupSize = mergeWorkgroupSize;
     this.timestamps = hasTimestampQuery(device);
     this._voxelBuffers = new WeakMap(); // ChunkData -> persistent GPUBuffer
     this._maskBuffer = device.createBuffer({
@@ -48,16 +74,28 @@ export class GpuMesher {
   // Pipelines are built up front so the first measured run is not a compile.
   async _createPipelines() {
     const module = this.device.createShaderModule({
-      code: createGpuMeshShader(CHUNK_SIZE, MAX_VERTICES),
+      code: createGpuMeshShader(CHUNK_SIZE, MAX_VERTICES, { mergeWorkgroupSize: this.mergeWorkgroupSize }),
     });
     const make = (entryPoint) =>
       this.device.createComputePipelineAsync({ layout: 'auto', compute: { module, entryPoint } });
 
-    [this._maskPipeline, this._mergePipeline, this._finalizePipeline] = await Promise.all([
+    let legacy, bitrun;
+    [this._maskPipeline, legacy, bitrun, this._finalizePipeline] = await Promise.all([
       make('mask_main'),
       make('merge_main'),
+      make('merge_bitrun_main'),
       make('finalize_main'),
     ]);
+    this._merge = {
+      legacy: { pipeline: legacy, workgroups: [1, Math.ceil(CHUNK_SIZE / 16), 1] },
+      bitrun: { pipeline: bitrun, workgroups: [Math.ceil((6 * CHUNK_SIZE) / this.mergeWorkgroupSize), 1, 1] },
+    };
+  }
+
+  /** Frees the GPU mirror of a chunk that will not be meshed again. */
+  releaseChunk(chunk) {
+    this._voxelBuffers.get(chunk)?.destroy();
+    this._voxelBuffers.delete(chunk);
   }
 
   /** Buffers for the CPU-readback path. Caller owns them. */
@@ -110,16 +148,19 @@ export class GpuMesher {
    * Nothing is read back here: the vertices stay in `target.positions` and the draw
    * arguments in `target.indirect`.
    *
-   * @returns {{ submitMs: number, uploadedBytes: number, gpuMs: Promise<{totalMs: number, passMs: number[]}|null> }}
+   * @returns {{ submitMs: number, uploadedBytes: number, gpuMs: Promise<{totalMs: number, passMs: Object<string, number>}|null> }}
    *   submitMs      - CPU time spent encoding and submitting.
    *   uploadedBytes - occupancy bytes sent CPU -> GPU for this call (dirty range only).
    *   gpuMs         - GPU execution time from timestamp queries, total and per pass
-   *                   [mask, merge, finalize] (null if unsupported or `profile` is
-   *                   false). Reads back 48 bytes of timestamps only.
+   *                   keyed by pass name { mask, merge, finalize } (null if
+   *                   unsupported or `profile` is false). Reads back 16 bytes of
+   *                   timestamps per pass only.
    */
-  mesh(chunk, target, { profile = false } = {}) {
+  mesh(chunk, target, { profile = false, mergeImpl = this.mergeImpl } = {}) {
     const device = this.device;
     const t0 = performance.now();
+    const merge = this._merge[mergeImpl];
+    if (!merge) throw new Error(`Unknown mergeImpl "${mergeImpl}"`);
 
     const { buffer: voxelBuffer, uploadedBytes } = this._syncVoxelBuffer(chunk);
     device.queue.writeBuffer(target.indirect, 0, INDIRECT_INITIAL);
@@ -131,7 +172,7 @@ export class GpuMesher {
       { binding: 0, resource: { buffer: voxelBuffer } },
       { binding: 1, resource: { buffer: this._maskBuffer } },
     ]);
-    const mergeGroup = bind(this._mergePipeline, [
+    const mergeGroup = bind(merge.pipeline, [
       { binding: 1, resource: { buffer: this._maskBuffer } },
       { binding: 2, resource: { buffer: target.positions } },
       { binding: 4, resource: { buffer: target.indirect } },
@@ -142,12 +183,13 @@ export class GpuMesher {
 
     const steps = [
       {
+        name: 'mask',
         pipeline: this._maskPipeline,
         group: maskGroup,
         workgroups: [Math.ceil(CHUNK_SIZE / 4), Math.ceil(CHUNK_SIZE / 4), Math.ceil(CHUNK_SIZE / 4)],
       },
-      { pipeline: this._mergePipeline, group: mergeGroup, workgroups: [1, Math.ceil(CHUNK_SIZE / 16), 1] },
-      { pipeline: this._finalizePipeline, group: finalizeGroup, workgroups: [1, 1, 1] },
+      { name: 'merge', pipeline: merge.pipeline, group: mergeGroup, workgroups: merge.workgroups },
+      { name: 'finalize', pipeline: this._finalizePipeline, group: finalizeGroup, workgroups: [1, 1, 1] },
     ];
     const record = (pass, step) => {
       pass.setPipeline(step.pipeline);
@@ -198,12 +240,12 @@ export class GpuMesher {
     const gpuMs = timed
       ? timestampRead.mapAsync(GPUMapMode.READ).then(() => {
           const t = new BigUint64Array(timestampRead.getMappedRange());
-          const passMs = steps.map((_, i) => Number(t[2 * i + 1] - t[2 * i]) / 1e6);
+          const passMs = Object.fromEntries(steps.map((step, i) => [step.name, Number(t[2 * i + 1] - t[2 * i]) / 1e6]));
           timestampRead.unmap();
           timestampRead.destroy();
           resolveBuffer.destroy();
           querySet.destroy();
-          return { totalMs: passMs.reduce((a, b) => a + b, 0), passMs };
+          return { totalMs: Object.values(passMs).reduce((a, b) => a + b, 0), passMs };
         })
       : Promise.resolve(null);
 
@@ -243,6 +285,25 @@ export class GpuMesher {
     };
   }
 
+  /** Copies the first `vertexCount` vec4 vertices of a target back to the CPU. */
+  async readPositions(target, vertexCount) {
+    const byteSize = vertexCount * POSITION_STRIDE_BYTES;
+    if (byteSize === 0) return new Float32Array(0);
+    const posRead = this.device.createBuffer({
+      size: byteSize,
+      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+    });
+    const encoder = this.device.createCommandEncoder();
+    encoder.copyBufferToBuffer(target.positions, 0, posRead, 0, byteSize);
+    this.device.queue.submit([encoder.finish()]);
+
+    await posRead.mapAsync(GPUMapMode.READ);
+    const data = new Float32Array(posRead.getMappedRange()).slice();
+    posRead.unmap();
+    posRead.destroy();
+    return data;
+  }
+
   /**
    * Legacy path: mesh, then copy the vertices back to the CPU and build a regular
    * THREE.BufferGeometry. Kept as the "GPU + readback" benchmark mode so the cost
@@ -265,19 +326,7 @@ export class GpuMesher {
     if (counters.vertexCount > 0) {
       const readbackStart = performance.now();
       const byteSize = counters.vertexCount * POSITION_STRIDE_BYTES;
-
-      const posRead = device.createBuffer({
-        size: byteSize,
-        usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-      });
-      const encoder = device.createCommandEncoder();
-      encoder.copyBufferToBuffer(target.positions, 0, posRead, 0, byteSize);
-      device.queue.submit([encoder.finish()]);
-
-      await posRead.mapAsync(GPUMapMode.READ);
-      const data = new Float32Array(posRead.getMappedRange()).slice();
-      posRead.unmap();
-      posRead.destroy();
+      const data = await this.readPositions(target, counters.vertexCount);
 
       // Interleaved view over the vec4 data: position = xyz, w (face id) is skipped.
       const interleaved = new THREE.InterleavedBuffer(data, 4);

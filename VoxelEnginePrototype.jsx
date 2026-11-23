@@ -2,15 +2,16 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { CHUNK_SIZE } from './src/voxel/ChunkData';
-import { GpuMesher } from './src/meshing/gpuMeshPipeline';
+import { GpuMesher, mergeOptionsFromUrl } from './src/meshing/gpuMeshPipeline';
+import { runCorrectnessCheck } from './src/meshing/correctnessCheck';
 import { MeshController, MODES } from './src/meshing/MeshController';
 import { DirectRenderBridge } from './src/render/DirectRenderBridge';
 import { getGpuDevice, getGpuInfo } from './src/gpu/gpuContext';
 import { VoxelEditor } from './src/interaction/VoxelEditor';
 import { FrameRecorder } from './src/benchmark/FrameRecorder';
 import { runEditBenchmark, measureIdleFrames } from './src/benchmark/editBenchmark';
-import { median } from './src/benchmark/stats';
-import { MeshStats, EditInfo, BenchmarkResults, fmt } from './src/ui/panels';
+import { median, medianPassMs } from './src/benchmark/stats';
+import { MeshStats, EditInfo, BenchmarkResults, CorrectnessResult, fmt } from './src/ui/panels';
 
 /**
  * VOXEL ENGINE PROTOTYPE - WebGPU Compute Shader Meshing
@@ -53,6 +54,7 @@ export default function VoxelEnginePrototype() {
   const [bench, setBench] = useState({ running: false, progress: null, idle: null, results: [] });
   const [frameInfo, setFrameInfo] = useState(null);
   const [recorder] = useState(() => new FrameRecorder());
+  const [check, setCheck] = useState(null); // correctness check report
 
   // Event handlers registered once (pointer events, render loop) need current values.
   const latest = useRef({});
@@ -124,13 +126,15 @@ export default function VoxelEnginePrototype() {
       const bridge = new DirectRenderBridge(renderer);
       c.mesher = null;
       if (device) {
-        c.mesher = await GpuMesher.create();
+        c.mesher = await GpuMesher.create(mergeOptionsFromUrl());
         if (cancelled) return;
         if (!bridge.isWebGPU) console.warn('THREE.WebGPURenderer is on the WebGL2 backend; zero-copy disabled.');
         setGpu({
           ready: true,
           direct: bridge.isWebGPU,
           timestamps: c.mesher.timestamps,
+          mergeImpl: c.mesher.mergeImpl,
+          mergeWorkgroupSize: c.mesher.mergeWorkgroupSize,
           note: bridge.isWebGPU ? '' : 'Renderer fell back to WebGL2, so zero-copy rendering is unavailable.',
         });
       }
@@ -272,6 +276,7 @@ export default function VoxelEnginePrototype() {
       const med = (key) => median(samples.map((s) => s[key]));
       setStats({
         mode, runs, warmup: WARMUP_RUNS,
+        mergeImpl: mode === 'cpu' ? null : ctx.current.mesher?.mergeImpl,
         quads: last.quadCount,
         overflowed: !!last.overflowed,
         naiveFaces: ctrl.naiveFaces,
@@ -281,13 +286,29 @@ export default function VoxelEnginePrototype() {
         },
         median: {
           totalMs: med('totalMs'), gpuMs: med('gpuMs'), readbackMs: med('readbackMs'),
-          passMs: last.passMs ? [0, 1, 2].map((i) => median(samples.map((s) => s.passMs?.[i]))) : null,
+          passMs: medianPassMs(samples),
         },
         minTotalMs: Math.min(...samples.map((s) => s.totalMs)),
       });
     } catch (err) {
       setError(err.message);
       console.error(err);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // ---- GPU vs CPU correctness check (default terrain, separate chunk) --------
+  const runCheck = async () => {
+    const mesher = ctx.current.mesher;
+    if (!mesher) return;
+    setError(null);
+    setBusy(true);
+    try {
+      setCheck(await runCorrectnessCheck(mesher));
+    } catch (err) {
+      console.error(err);
+      setError(err.message);
     } finally {
       setBusy(false);
     }
@@ -341,6 +362,8 @@ export default function VoxelEnginePrototype() {
         userAgent: navigator.userAgent,
         gpu: getGpuInfo(),
         chunkSize: CHUNK_SIZE,
+        mergeImpl: gpu.mergeImpl ?? null,
+        mergeWorkgroupSize: gpu.mergeWorkgroupSize ?? null,
         ...EDIT_BENCH,
         radius: bench.results[0]?.radius ?? radius,
         display: { devicePixelRatio: window.devicePixelRatio, viewport: [window.innerWidth, window.innerHeight] },
@@ -386,6 +409,18 @@ export default function VoxelEnginePrototype() {
             Benchmark ×{BENCH_RUNS}
           </button>
         </div>
+
+        {available['gpu-readback'] && (
+          <div style={{ marginTop: '8px' }}>
+            <button onClick={runCheck} disabled={locked} style={button('#16a085', locked, true)}>
+              Run correctness check
+            </button>
+            <span style={{ fontSize: '11px', color: '#95a5a6', marginLeft: '8px' }}>
+              merge: {gpu.mergeImpl}{gpu.mergeImpl === 'bitrun' ? ` (wg ${gpu.mergeWorkgroupSize})` : ''}
+            </span>
+          </div>
+        )}
+        <CorrectnessResult report={check} />
 
         {error && <div style={{ color: '#ff6b6b', marginTop: '10px' }}>❌ {error}</div>}
         <MeshStats stats={stats} timestamps={gpu.timestamps} />

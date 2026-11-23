@@ -19,6 +19,13 @@ export function percentile(values, p) {
 
 export const median = (values) => percentile(values, 50);
 
+/** Per-pass median over results whose passMs is { passName: ms }; null if none were timed. */
+export function medianPassMs(results) {
+  const names = Object.keys(results.find((r) => r.passMs)?.passMs ?? {});
+  if (names.length === 0) return null;
+  return Object.fromEntries(names.map((n) => [n, median(results.map((r) => r.passMs?.[n]))]));
+}
+
 export function max(values) {
   const v = nums(values);
   return v.length ? Math.max(...v) : null;

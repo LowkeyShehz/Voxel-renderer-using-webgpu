@@ -18,6 +18,7 @@ export function MeshStats({ stats, timestamps }) {
       <div style={{ ...muted, marginBottom: '6px' }}>
         {MODES[stats.mode].label} ·{' '}
         {stats.runs > 1 ? `median of ${stats.runs} runs (after ${stats.warmup} warm-up)` : 'single run'}
+        {stats.mergeImpl && ` · merge: ${stats.mergeImpl}`}
       </div>
       <div>⏱️ Total Time: <strong>{fmtMs(shown.totalMs)}</strong></div>
       {stats.runs > 1 && <div>🏁 Best Run: <strong>{fmtMs(stats.minTotalMs)}</strong></div>}
@@ -26,7 +27,7 @@ export function MeshStats({ stats, timestamps }) {
       )}
       {gpuMode && timestamps && shown.passMs && (
         <div style={muted}>
-          &nbsp;&nbsp;mask {fmt(shown.passMs[0])} · merge {fmt(shown.passMs[1])} · finalize {fmt(shown.passMs[2])} ms
+          &nbsp;&nbsp;{Object.entries(shown.passMs).map(([name, ms]) => `${name} ${fmt(ms)}`).join(' · ')} ms
         </div>
       )}
       <div>
@@ -42,6 +43,26 @@ export function MeshStats({ stats, timestamps }) {
       <div>🚀 Greedy Quads (Merged): <strong style={{ color: '#2ecc71' }}>{stats.quads?.toLocaleString() ?? '–'}</strong></div>
       {stats.overflowed && <div style={{ color: '#ff6b6b' }}>⚠️ Output buffer overflowed — mesh is truncated</div>}
       <div style={{ ...muted, marginTop: '6px' }}>CPU time excludes Three's geometry upload on first draw.</div>
+    </div>
+  );
+}
+
+/** Result of the GPU-vs-CPU correctness check (one line per merge implementation). */
+export function CorrectnessResult({ report }) {
+  if (!report) return null;
+  return (
+    <div style={{ marginTop: '8px', fontSize: '12px' }}>
+      <div style={{ color: report.pass ? '#2ecc71' : '#ff6b6b' }}>
+        {report.pass ? '✅' : '❌'} CPU: <strong>{report.cpuQuads.toLocaleString()}</strong> quads (default terrain)
+      </div>
+      {report.results.map((r) => (
+        <div key={r.impl} style={{ color: r.countMatch && r.setsEqual ? 'white' : '#ff6b6b' }}>
+          &nbsp;&nbsp;GPU {r.impl}: <strong>{r.gpuQuads.toLocaleString()}</strong> quads ·{' '}
+          {r.setsEqual ? 'same quad set' : `quad sets differ (${r.onlyInCpu.length}+ only on CPU, ${r.onlyInGpu.length}+ only on GPU)`}
+          {r.overflowed && ' · overflowed'}
+        </div>
+      ))}
+      <div style={muted}>Details in the console.</div>
     </div>
   );
 }
