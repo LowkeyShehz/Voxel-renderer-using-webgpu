@@ -115,8 +115,10 @@ into it (0.95 chunks remeshed per edit), which is why CPU→GPU here is 3,943 KB
 4,122 KB. The meshes themselves are identical.
 
 Table IV static numbers on the final code: CPU greedy, from the app's Benchmark ×20 panel (screenshot, 1×1):
-median 119.98 ms, best 117.80 ms. The two GPU rows are **STILL OPEN** (run Benchmark ×20 in GPU + Readback
-and GPU Direct). Benchmark ×20 has no export button, so keep a screenshot of each panel as the record.
+median 119.98 ms, best 117.80 ms. GPU direct (screenshot, 1×1): median 3.52 ms, best 3.29 ms, GPU 2.40 ms
+(mask 0.03, merge 2.37, finalize 0.00). That is 34× faster than the CPU, against 13.1× with the legacy merge
+(7.77 ms). GPU + readback is **STILL OPEN**. Re-run all three with the new **Export mesh JSON** button so the
+table comes from a file rather than screenshots.
 
 ## 6. Section VI.E "Where the system lags": update
 
@@ -150,8 +152,9 @@ Keep the point that the merge is still serial within a slice.
 
 ## 9. STILL OPEN
 
-- **IV.G memory per chunk.** Read the *World* line in GPU Direct at 1×1, 2×2, 4×4 and 6×6. From the
-  code, expect 6.0 MiB output and 108 KB of voxels per chunk, plus about 0.64 MiB of shared scratch.
-  This must be confirmed by measurement before it goes in.
+- **IV.G memory per chunk.** Run Generate Mesh in GPU Direct at 1×1, 2×2, 4×4 and 6×6, then Export mesh JSON;
+  the memory table gives zero-copy MB per chunk, voxels, scratch and the JS heap. So far (1×1 screenshot):
+  zero-copy 6.0 MB for 1 chunk, voxels 0.1 MB, scratch 0.6 MB. The 12.0 MB "output" on that screenshot
+  includes the 6 MB readback buffer left from using GPU + readback, which is not per-chunk memory.
 - **Table IV** on the final code (see section 5).
 - **Citations.** These have not been checked, especially the 2025 references.

@@ -49,3 +49,22 @@ test('benchmarks-to-md: merge A/B export becomes a table with the speed-up', () 
   assert.match(md, /Speed-up of the merge pass: \*\*2\.74×\*\*/);
   assert.match(readFileSync(join(dir, 'merge-ab-test.csv'), 'utf8'), /^"impl","mask_median"/);
 });
+
+test('benchmarks-to-md: mesh-runs export gives time and per-chunk memory tables', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'mesh-runs-'));
+  const file = join(dir, 'mesh-runs-test.json');
+  const MiB = 1048576;
+  writeFileSync(file, JSON.stringify({
+    kind: 'mesh-runs', meta: { date: 'test' },
+    runs: [{
+      mode: 'gpu-direct', gridSize: 2, chunks: 4, runs: 20, warmup: 2, quads: 204826,
+      totalMs: { median: 12.5, min: 11.9, max: 14 }, gpuMs: 9.6, readbackMs: 0, passMs: { mask: 0.12, merge: 9.4, finalize: 0.01 },
+      bytesUp: 0, bytesDown: 128,
+      memory: { directOutputBytes: 4 * 6 * MiB, directMeshes: 4, readbackBytes: 6 * MiB, voxelBytes: 4 * 110592, voxelChunks: 4, scratchBytes: 670464 },
+      heapMB: 150,
+    }],
+  }));
+  const md = execFileSync(process.execPath, ['scripts/benchmarks-to-md.mjs', file], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+  assert.match(md, /\| GPU direct \| 2×2 \| 20 \| 12\.50 \| 11\.90 \|/);
+  assert.match(md, /\| GPU direct \| 2×2 \| 24\.00 \| 4 \| 6\.00 \| 6\.00 \| 0\.42 \| 4 \| 0\.64 \| 150 \|/);
+});

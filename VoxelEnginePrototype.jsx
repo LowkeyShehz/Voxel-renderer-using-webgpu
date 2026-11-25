@@ -76,6 +76,7 @@ export default function VoxelEnginePrototype() {
   const [frameInfo, setFrameInfo] = useState(null);
   const [recorder] = useState(() => new FrameRecorder());
   const [check, setCheck] = useState(null); // correctness check report
+  const [meshRuns, setMeshRuns] = useState([]); // every Generate Mesh / Benchmark ×N result, for export
   const [mergeAb, setMergeAb] = useState({ running: false, progress: null, report: null }); // legacy vs bit-run merge timing
   const [sweepMin, setSweepMin] = useState(1); // sweep grids sweepMin x sweepMin .. sweepMax x sweepMax
   const [sweepMax, setSweepMax] = useState(4);
@@ -425,6 +426,28 @@ export default function VoxelEnginePrototype() {
         },
         minTotalMs: Math.min(...samples.map((s) => s.totalMs)),
       });
+      setMeshRuns((prev) => [...prev, {
+        date: new Date().toISOString(),
+        mode,
+        gridSize: ctrl.world.gridSize,
+        chunks: last.chunks,
+        runs,
+        warmup: runs > 1 ? WARMUP_RUNS : 0,
+        mergeImpl: mode === 'cpu' ? null : ctx.current.mesher?.mergeImpl ?? null,
+        quads: last.quadCount,
+        naiveFaces: last.naiveFaces,
+        overflowed: !!last.overflowed,
+        totalMs: { median: med('totalMs'), min: Math.min(...samples.map((s) => s.totalMs)), max: Math.max(...samples.map((s) => s.totalMs)) },
+        gpuMs: med('gpuMs'),
+        readbackMs: med('readbackMs'),
+        passMs: medianPassMs(samples),
+        bytesUp: last.bytesUp,
+        bytesDown: last.bytesDown,
+        samplesMs: samples.map((s) => s.totalMs),
+        // GPU memory and JS heap right after this mesh is shown (for the per-chunk memory figures)
+        memory: ctrl.gpuMemory(),
+        heapMB: performance.memory ? performance.memory.usedJSHeapSize / 1048576 : null,
+      }]);
       updateWorldInfo();
     } catch (err) {
       setError(err.message);
@@ -432,6 +455,29 @@ export default function VoxelEnginePrototype() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const exportMeshRuns = () => {
+    const payload = {
+      kind: 'mesh-runs',
+      meta: {
+        date: new Date().toISOString(),
+        userAgent: navigator.userAgent,
+        gpu: getGpuInfo(),
+        hardwareConcurrency: navigator.hardwareConcurrency ?? null,
+        chunkSize: CHUNK_SIZE,
+        mergeImpl: gpu.mergeImpl ?? null,
+        mergeWorkgroupSize: gpu.mergeWorkgroupSize ?? null,
+        display: { devicePixelRatio: window.devicePixelRatio, viewport: [window.innerWidth, window.innerHeight] },
+      },
+      runs: meshRuns,
+    };
+    const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mesh-runs-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   // ---- GPU vs CPU correctness check (own chunks, the world is untouched) ----
@@ -661,6 +707,14 @@ export default function VoxelEnginePrototype() {
           <button onClick={() => execute(BENCH_RUNS)} disabled={locked} style={button(modeColor, locked, true)}>
             Benchmark ×{BENCH_RUNS}
           </button>
+        </div>
+        <div style={{ marginTop: '8px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button onClick={exportMeshRuns} disabled={meshRuns.length === 0} style={button(modeColor, false, true)}>
+            Export mesh JSON
+          </button>
+          <span style={{ fontSize: '11px', color: '#95a5a6' }}>
+            {meshRuns.length} run{meshRuns.length === 1 ? '' : 's'} recorded (times + GPU memory)
+          </span>
         </div>
         {available['gpu-readback'] && (
           <div style={{ marginTop: '8px' }}>

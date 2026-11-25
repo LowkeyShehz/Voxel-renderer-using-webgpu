@@ -106,6 +106,12 @@ export function WorldInfo({ info }) {
       <div style={muted}>
         GPU meshing memory: output {fmtMB(m.outputBytes)} · voxels {fmtMB(m.voxelBytes)} · scratch {fmtMB(m.scratchBytes)}
       </div>
+      {m.outputBytes > 0 && (
+        <div style={muted}>
+          &nbsp;&nbsp;output = zero-copy {fmtMB(m.directOutputBytes)} ({m.directMeshes} chunk{m.directMeshes === 1 ? '' : 's'})
+          {m.readbackBytes > 0 && <> + readback buffer {fmtMB(m.readbackBytes)}</>}
+        </div>
+      )}
     </div>
   );
 }

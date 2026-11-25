@@ -10,6 +10,7 @@
  *     the repeats; CSV has one row per (grid, mode) with median/min/max columns.
  *   - edit-benchmark JSON ("Export JSON"): one row per mode, as in the app's table.
  *   - merge A/B JSON ("Export A/B JSON"): legacy vs bit-run pass times and speed-up.
+ *   - mesh JSON ("Export mesh JSON"): every Generate Mesh / Benchmark ×N run with its GPU memory.
  * The CSV is written next to each input (same name, .csv) unless --csv-dir is given.
  * No dependencies; reads the summary logic from src/benchmark/sweepSummary.js so the
  * numbers match the app.
@@ -123,6 +124,34 @@ function mergeAbToMarkdown(json, name) {
   return { markdown: md, csv: [header, ...csvRows].map((r) => r.map(csvCell).join(',')).join('\n') + '\n' };
 }
 
+function meshRunsToMarkdown(json, name) {
+  const MB = (b) => (typeof b === 'number' ? (b / 1048576).toFixed(2) : '–');
+  const runs = json.runs ?? [];
+  const header = ['mode', 'grid', 'runs', 'median ms', 'best ms', 'GPU ms', 'mask', 'merge', 'finalize', 'readback ms', 'quads', '↑ KB', '↓ KB'];
+  const rows = runs.map((r) => [
+    label(r.mode), `${r.gridSize}×${r.gridSize}`, r.runs, num(r.totalMs.median), num(r.totalMs.min), num(r.gpuMs), num(r.passMs?.mask, 3),
+    num(r.passMs?.merge, 3), num(r.passMs?.finalize, 3), num(r.readbackMs), r.quads?.toLocaleString?.() ?? '–', num(r.bytesUp / 1024, 1), num(r.bytesDown / 1024, 1),
+  ]);
+  const memHeader = ['mode', 'grid', 'zero-copy MB', 'chunks', 'MB per chunk', 'readback MB', 'voxels MB', 'voxel chunks', 'scratch MB', 'JS heap MB'];
+  const memRows = runs.map((r) => {
+    const m = r.memory ?? {};
+    return [label(r.mode), `${r.gridSize}×${r.gridSize}`, MB(m.directOutputBytes), m.directMeshes ?? '–',
+      m.directMeshes ? MB(m.directOutputBytes / m.directMeshes) : '–', MB(m.readbackBytes), MB(m.voxelBytes), m.voxelChunks ?? '–',
+      MB(m.scratchBytes), num(r.heapMB, 0)];
+  });
+  const md = [
+    `## Mesh runs: ${name}`, '', metaBlock(json.meta), '',
+    'Full-world meshing; times are the median of the runs after warm-up (Benchmark ×N) or a single run.', '',
+    table(header, rows), '', '### GPU memory after each run (MiB)', '', table(memHeader, memRows), '',
+  ].join('\n');
+  const csvHeader = ['mode', 'gridSize', 'chunks', 'runs', 'medianMs', 'minMs', 'maxMs', 'gpuMs', 'passMask', 'passMerge', 'passFinalize',
+    'readbackMs', 'quads', 'bytesUp', 'bytesDown', 'directOutputBytes', 'directMeshes', 'readbackBytes', 'voxelBytes', 'voxelChunks', 'scratchBytes', 'heapMB'];
+  const csvRows = runs.map((r) => [r.mode, r.gridSize, r.chunks, r.runs, r.totalMs.median, r.totalMs.min, r.totalMs.max, r.gpuMs,
+    r.passMs?.mask, r.passMs?.merge, r.passMs?.finalize, r.readbackMs, r.quads, r.bytesUp, r.bytesDown,
+    r.memory?.directOutputBytes, r.memory?.directMeshes, r.memory?.readbackBytes, r.memory?.voxelBytes, r.memory?.voxelChunks, r.memory?.scratchBytes, r.heapMB]);
+  return { markdown: md, csv: [csvHeader, ...csvRows].map((r) => r.map(csvCell).join(',')).join('\n') + '\n' };
+}
+
 const args = process.argv.slice(2);
 let csvDir = null;
 const files = [];
@@ -140,7 +169,8 @@ for (const file of files) {
   const json = JSON.parse(readFileSync(file, 'utf8'));
   const name = basename(file);
   const isSweep = json.kind === 'sweep' || Array.isArray(json.runs);
-  const convert = json.kind === 'merge-ab' ? mergeAbToMarkdown : isSweep ? sweepToMarkdown : editBenchToMarkdown;
+  const convert = json.kind === 'merge-ab' ? mergeAbToMarkdown : json.kind === 'mesh-runs' ? meshRunsToMarkdown
+    : isSweep ? sweepToMarkdown : editBenchToMarkdown;
   const { markdown, csv } = convert(json, name);
   process.stdout.write(markdown + '\n');
   const csvPath = join(csvDir ?? dirname(file), name.replace(/\.json$/i, '') + '.csv');

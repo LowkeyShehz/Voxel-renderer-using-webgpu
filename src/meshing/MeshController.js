@@ -174,14 +174,25 @@ export class MeshController {
 
   // ---- memory --------------------------------------------------------------
 
-  /** GPU memory held for meshing, in bytes (excludes Three's own scene buffers). */
+  /**
+   * GPU memory held for meshing, in bytes (excludes Three's own scene buffers).
+   *   outputBytes       - all vertex output: directOutputBytes + readbackBytes
+   *   directOutputBytes - zero-copy vertex + indirect buffers, one per chunk (directMeshes)
+   *   readbackBytes     - the single readback target, kept once GPU + readback has been used
+   *   voxelBytes        - GPU occupancy mirrors, one per chunk meshed on the GPU (voxelChunks)
+   *   scratchBytes      - slice masks + neighbour border planes, shared by all chunks
+   */
   gpuMemory() {
-    let output = 0;
-    for (const d of this._direct.values()) output += d.gpuBytes;
-    if (this._readbackTarget) output += this._readbackTarget.capacity * POSITION_STRIDE_BYTES + COUNTER_BYTES;
+    let directOutputBytes = 0;
+    for (const d of this._direct.values()) directOutputBytes += d.gpuBytes;
+    const readbackBytes = this._readbackTarget ? this._readbackTarget.capacity * POSITION_STRIDE_BYTES + COUNTER_BYTES : 0;
     return {
-      outputBytes: output,
+      outputBytes: directOutputBytes + readbackBytes,
+      directOutputBytes,
+      directMeshes: this._direct.size,
+      readbackBytes,
       voxelBytes: this._gpuChunks.size * VOXEL_BUFFER_BYTES,
+      voxelChunks: this._gpuChunks.size,
       scratchBytes: this.mesher?.scratchBytes ?? 0,
     };
   }
