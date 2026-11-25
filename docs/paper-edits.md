@@ -5,6 +5,8 @@ Every number below comes from a committed export in `benchmarks/`. Items marked
 
 Sources:
 - `benchmarks/phase5/merge-ab-2026-11-25T13-31-51-920Z.json`: merge A/B, 55 alternating rounds
+- `benchmarks/phase5/mesh-runs-2026-11-25T14-53-14-043Z.json`: Benchmark ×20 per mode at 1×1 (Table IV), and
+  GPU direct Generate Mesh at 1×1–6×6 with GPU memory (IV.G)
 - `benchmarks/phase5/sweep-2026-11-25T13-58-50-605Z-r24-1to3.json`: sweep 1×1–3×3, radius 24, 3 runs each, bit-run merge
 - `benchmarks/phase5/sweep-2026-11-25T14-43-22-210Z-r24-4x4.json`: sweep 4×4 only, same settings, run in a fresh tab after the
   memory-leak fix (commit 898113c). The 1×1–3×3 runs used the code from before that fix; the fix changes memory use,
@@ -114,11 +116,31 @@ KB per edit is averaged over all 40 edits. Two of them landed while a remesh was
 into it (0.95 chunks remeshed per edit), which is why CPU→GPU here is 3,943 KB rather than Table VI's
 4,122 KB. The meshes themselves are identical.
 
-Table IV static numbers on the final code: CPU greedy, from the app's Benchmark ×20 panel (screenshot, 1×1):
-median 119.98 ms, best 117.80 ms. GPU direct (screenshot, 1×1): median 3.52 ms, best 3.29 ms, GPU 2.40 ms
-(mask 0.03, merge 2.37, finalize 0.00). That is 34× faster than the CPU, against 13.1× with the legacy merge
-(7.77 ms). GPU + readback is **STILL OPEN**. Re-run all three with the new **Export mesh JSON** button so the
-table comes from a file rather than screenshots.
+### Table IV on the final code (bit-run merge)
+
+From the mesh-runs export: 1×1, median of 20 runs after 2 warm-up runs, 50,112 quads in every mode.
+
+| Mode | Median | Best | GPU | Readback |
+|---|---|---|---|---|
+| CPU greedy | 118.56 | 116.42 | n/a | 0 |
+| GPU + readback | 13.36 | 13.09 | 3.97 | 8.51 |
+| **GPU direct** | **3.48** | **2.67** | **2.33** | none |
+
+Times in ms. Change the table caption from "Legacy merge pass" to "Bit-run merge pass". You can keep the
+legacy numbers in the text or as a second block.
+
+What changes in the text (Section VI.B, Fig. 2, abstract, conclusion):
+- GPU direct is **34× faster than the CPU** (118.56 / 3.48), up from 13.1×, and 3.8× faster than readback
+  (13.36 / 3.48), up from 2.7×.
+- The readback alone (8.51 ms) still takes longer than the whole direct path (3.48 ms); the existing sentence
+  stays true with the new numbers.
+- Merge pass inside a full remesh: 2.29 ms direct, 3.91 ms readback (timestamp queries, same session).
+- **The CPU baseline is slower than before**: 118.6 ms now against 101.9 ms in the Phase 4 run (Chrome 152).
+  Since then the CPU mesher also looks up neighbour chunks at the borders, and the browser changed to
+  Brave/Chromium 155. These runs did not separate the two causes, so do not attribute the difference.
+  If you quote "34×", quote it with these same-session numbers, not against 101.9 ms.
+
+Fig. 2 bars: 118.6 / 13.4 / 3.5 if you redraw it for the final code.
 
 ## 6. Section VI.E "Where the system lags": update
 
@@ -133,10 +155,13 @@ Keep the point that the merge is still serial within a slice.
 
 - **Abstract.** "cut merge time from 2.82 ms to 1.25 ms on a second GPU" becomes "cut merge time
   2.8-fold on the RX 5600 XT (6.30 to 2.23 ms) and 2.3-fold on a second GPU".
+- **Abstract, headline.** If Table IV moves to the final code: "the GPU path meshed a chunk of 50,112 quads
+  in 3.5 ms against 118.6 ms for the CPU (34×)". Keep the edit-benchmark sentences (40/40 stutters,
+  150 ms frames, 34.8 KB vs 4.1 MB) as they are; they come from Tables V–VI.
 - **Conclusion, Outcome.** Same change.
 - **Conclusion, Limitations.** Drop "the multi-chunk scaling results and the bit-run timing on the main GPU
-  are still to be measured". Scaling was measured up to 4×4 chunks (16 chunks, 817,291 quads); larger
-  worlds (5×5, 6×6) were not benchmarked.
+  are still to be measured". Scaling with edits was measured up to 4×4 chunks (16 chunks, 817,291 quads);
+  5×5 and 6×6 were meshed once each in GPU direct mode (see IV.G below) but not edit-benchmarked.
 
 ## 8. Text that no longer matches the code
 
@@ -150,11 +175,36 @@ Keep the point that the merge is still serial within a slice.
 - **Table III.** Add the Phase 5 browser (Brave, Chromium 155) next to Chrome 152, or state which tables
   used which.
 
+## 8b. Section IV.G: replace the red TODO "confirm final memory figures per chunk"
+
+From the mesh-runs export (GPU direct, Generate Mesh at each world size; GPU memory read back from the app):
+
+| World | Chunks | Quads | Zero-copy output | Voxel mirrors | Full mesh (ms) |
+|---|---|---|---|---|---|
+| 1×1 | 1 | 50,112 | 6.0 MiB | 0.11 MiB | 4.6 |
+| 2×2 | 4 | 204,826 | 24.0 MiB | 0.42 MiB | 18.5 |
+| 3×3 | 9 | 446,399 | 54.0 MiB | 0.95 MiB | 39.3 |
+| 4×4 | 16 | 817,291 | 96.0 MiB | 1.69 MiB | 68.7 |
+| 5×5 | 25 | 1,251,263 | 150.0 MiB | 2.64 MiB | 94.7 |
+| 6×6 | 36 | 1,816,914 | 216.0 MiB | 3.80 MiB | 128.7 |
+
+Shared by all chunks: 0.64 MiB of scratch (slice masks + border planes). No chunk overflowed its buffer.
+The 1×1 GPU-direct times here are single runs; Table IV's 3.48 ms is the median of 20. A 6 MiB readback buffer
+also existed because GPU + readback had been used earlier; it is not per-chunk memory and is not counted above.
+
+Suggested text:
+
+> Each chunk holds a 6.0 MiB vertex buffer (393,216 vertices of 16 bytes, room for 65,536 quads against the
+> 50,112 the terrain needs) and a 108 KiB copy of its occupancy bits; all chunks share 0.64 MiB of mask and
+> border-plane scratch. Memory therefore grows linearly: 216 MiB of vertex buffers and 3.8 MiB of voxel
+> mirrors for the largest 6×6 world (36 chunks, 1.82 million quads), which the GPU direct path meshed in
+> 129 ms. The page's JavaScript heap stayed between 26 and 73 MB from 1 to 36 chunks, because no CPU copy of
+> the vertices is kept; such a copy would have added 6 MiB per chunk.
+
+Note on the heap figures: they are `performance.memory` readings taken right after each run, so garbage
+collection timing makes them jump around (26 → 57 → 27 → 28 → 73 → 31 MB). The claim they support is "does not
+grow with the number of chunks", not an exact figure.
+
 ## 9. STILL OPEN
 
-- **IV.G memory per chunk.** Run Generate Mesh in GPU Direct at 1×1, 2×2, 4×4 and 6×6, then Export mesh JSON;
-  the memory table gives zero-copy MB per chunk, voxels, scratch and the JS heap. So far (1×1 screenshot):
-  zero-copy 6.0 MB for 1 chunk, voxels 0.1 MB, scratch 0.6 MB. The 12.0 MB "output" on that screenshot
-  includes the 6 MB readback buffer left from using GPU + readback, which is not per-chunk memory.
-- **Table IV** on the final code (see section 5).
 - **Citations.** These have not been checked, especially the 2025 references.

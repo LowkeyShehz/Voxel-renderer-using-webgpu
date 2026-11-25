@@ -1,0 +1,431 @@
+{
+  "kind": "mesh-runs",
+  "meta": {
+    "date": "2026-11-25T14:53:14.043Z",
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "gpu": {
+      "vendor": "amd",
+      "architecture": "rdna-1",
+      "device": "0x731f",
+      "description": "AMD Radeon RX 5600 XT (RADV NAVI10)",
+      "timestampQuery": true
+    },
+    "hardwareConcurrency": 6,
+    "chunkSize": 96,
+    "mergeImpl": "bitrun",
+    "mergeWorkgroupSize": 8,
+    "display": {
+      "devicePixelRatio": 1,
+      "viewport": [
+        1920,
+        999
+      ]
+    }
+  },
+  "runs": [
+    {
+      "date": "2026-11-25T14:52:16.173Z",
+      "mode": "cpu",
+      "gridSize": 1,
+      "chunks": 1,
+      "runs": 20,
+      "warmup": 2,
+      "mergeImpl": null,
+      "quads": 50112,
+      "naiveFaces": 116820,
+      "overflowed": false,
+      "totalMs": {
+        "median": 118.55750000011176,
+        "min": 116.4199999999255,
+        "max": 139.37999999988824
+      },
+      "gpuMs": null,
+      "readbackMs": 0,
+      "passMs": null,
+      "bytesUp": 6013440,
+      "bytesDown": 0,
+      "samplesMs": [
+        129.07000000029802,
+        129.8549999995157,
+        139.37999999988824,
+        117.7600000007078,
+        118.08999999985099,
+        117.26499999966472,
+        126.34999999962747,
+        117.21499999985099,
+        118.53000000026077,
+        125.11000000033528,
+        118.64499999955297,
+        117.88499999977648,
+        118.25999999977648,
+        124.61500000022352,
+        118.98000000044703,
+        118.58499999996275,
+        124.9199999999255,
+        117.32999999914318,
+        118.08999999985099,
+        116.4199999999255
+      ],
+      "memory": {
+        "outputBytes": 0,
+        "directOutputBytes": 0,
+        "directMeshes": 0,
+        "readbackBytes": 0,
+        "voxelBytes": 0,
+        "voxelChunks": 0,
+        "scratchBytes": 670464
+      },
+      "heapMB": 106.05574703216553
+    },
+    {
+      "date": "2026-11-25T14:52:21.736Z",
+      "mode": "gpu-readback",
+      "gridSize": 1,
+      "chunks": 1,
+      "runs": 20,
+      "warmup": 2,
+      "mergeImpl": "bitrun",
+      "quads": 50112,
+      "naiveFaces": null,
+      "overflowed": false,
+      "totalMs": {
+        "median": 13.359999999869615,
+        "min": 13.089999999850988,
+        "max": 16.549999999813735
+      },
+      "gpuMs": 3.97246,
+      "readbackMs": 8.507499999832362,
+      "passMs": {
+        "mask": 0.059179999999999996,
+        "merge": 3.90902,
+        "finalize": 0.00462
+      },
+      "bytesUp": 4810752,
+      "bytesDown": 4810752,
+      "samplesMs": [
+        13.410000000149012,
+        13.149999999441206,
+        13.669999999925494,
+        13.440000000409782,
+        13.259999999776483,
+        14.925000000745058,
+        13.379999999888241,
+        14.214999999850988,
+        14,
+        13.4300000006333,
+        13.31499999947846,
+        13.339999999850988,
+        13.125,
+        13.195000000298023,
+        13.28000000026077,
+        13.284999999217689,
+        13.525000000372529,
+        13.15500000026077,
+        13.089999999850988,
+        16.549999999813735
+      ],
+      "memory": {
+        "outputBytes": 6291488,
+        "directOutputBytes": 0,
+        "directMeshes": 0,
+        "readbackBytes": 6291488,
+        "voxelBytes": 110592,
+        "voxelChunks": 1,
+        "scratchBytes": 670464
+      },
+      "heapMB": 29.158784866333008
+    },
+    {
+      "date": "2026-11-25T14:52:24.519Z",
+      "mode": "gpu-direct",
+      "gridSize": 1,
+      "chunks": 1,
+      "runs": 20,
+      "warmup": 2,
+      "mergeImpl": "bitrun",
+      "quads": 50112,
+      "naiveFaces": null,
+      "overflowed": false,
+      "totalMs": {
+        "median": 3.4825000003911555,
+        "min": 2.669999999925494,
+        "max": 4.115000000223517
+      },
+      "gpuMs": 2.32948,
+      "readbackMs": 0,
+      "passMs": {
+        "mask": 0.03404,
+        "merge": 2.2921,
+        "finalize": 0.00332
+      },
+      "bytesUp": 0,
+      "bytesDown": 32,
+      "samplesMs": [
+        3.5300000002607703,
+        3.230000000447035,
+        3.440000000409782,
+        3.5699999993667006,
+        3.6349999997764826,
+        3.5,
+        4.115000000223517,
+        3.540000000037253,
+        3.650000000372529,
+        4,
+        3.4900000002235174,
+        3.4699999997392297,
+        3.159999999217689,
+        3.540000000037253,
+        3.4450000002980232,
+        3.459999999962747,
+        2.669999999925494,
+        3.4700000006705523,
+        3.4750000005587935,
+        3.455000000074506
+      ],
+      "memory": {
+        "outputBytes": 12582976,
+        "directOutputBytes": 6291488,
+        "directMeshes": 1,
+        "readbackBytes": 6291488,
+        "voxelBytes": 110592,
+        "voxelChunks": 1,
+        "scratchBytes": 670464
+      },
+      "heapMB": 50.497650146484375
+    },
+    {
+      "date": "2026-11-25T14:52:46.975Z",
+      "mode": "gpu-direct",
+      "gridSize": 1,
+      "chunks": 1,
+      "runs": 1,
+      "warmup": 0,
+      "mergeImpl": "bitrun",
+      "quads": 50112,
+      "naiveFaces": null,
+      "overflowed": false,
+      "totalMs": {
+        "median": 4.604999999515712,
+        "min": 4.604999999515712,
+        "max": 4.604999999515712
+      },
+      "gpuMs": 3.9209599999999996,
+      "readbackMs": 0,
+      "passMs": {
+        "mask": 0.05868,
+        "merge": 3.85804,
+        "finalize": 0.00424
+      },
+      "bytesUp": 0,
+      "bytesDown": 32,
+      "samplesMs": [
+        4.604999999515712
+      ],
+      "memory": {
+        "outputBytes": 12582976,
+        "directOutputBytes": 6291488,
+        "directMeshes": 1,
+        "readbackBytes": 6291488,
+        "voxelBytes": 110592,
+        "voxelChunks": 1,
+        "scratchBytes": 670464
+      },
+      "heapMB": 26.08656120300293
+    },
+    {
+      "date": "2026-11-25T14:52:49.989Z",
+      "mode": "gpu-direct",
+      "gridSize": 2,
+      "chunks": 4,
+      "runs": 1,
+      "warmup": 0,
+      "mergeImpl": "bitrun",
+      "quads": 204826,
+      "naiveFaces": null,
+      "overflowed": false,
+      "totalMs": {
+        "median": 18.52000000141561,
+        "min": 18.52000000141561,
+        "max": 18.52000000141561
+      },
+      "gpuMs": 13.79008,
+      "readbackMs": 0,
+      "passMs": {
+        "mask": 0.18972,
+        "merge": 13.58388,
+        "finalize": 0.01648
+      },
+      "bytesUp": 27648,
+      "bytesDown": 128,
+      "samplesMs": [
+        18.52000000141561
+      ],
+      "memory": {
+        "outputBytes": 31457440,
+        "directOutputBytes": 25165952,
+        "directMeshes": 4,
+        "readbackBytes": 6291488,
+        "voxelBytes": 442368,
+        "voxelChunks": 4,
+        "scratchBytes": 670464
+      },
+      "heapMB": 57.29826354980469
+    },
+    {
+      "date": "2026-11-25T14:52:54.887Z",
+      "mode": "gpu-direct",
+      "gridSize": 3,
+      "chunks": 9,
+      "runs": 1,
+      "warmup": 0,
+      "mergeImpl": "bitrun",
+      "quads": 446399,
+      "naiveFaces": null,
+      "overflowed": false,
+      "totalMs": {
+        "median": 39.31499999947846,
+        "min": 39.31499999947846,
+        "max": 39.31499999947846
+      },
+      "gpuMs": 26.559519999999996,
+      "readbackMs": 0,
+      "passMs": {
+        "mask": 0.3616,
+        "merge": 26.1652,
+        "finalize": 0.03272
+      },
+      "bytesUp": 62208,
+      "bytesDown": 288,
+      "samplesMs": [
+        39.31499999947846
+      ],
+      "memory": {
+        "outputBytes": 62914880,
+        "directOutputBytes": 56623392,
+        "directMeshes": 9,
+        "readbackBytes": 6291488,
+        "voxelBytes": 995328,
+        "voxelChunks": 9,
+        "scratchBytes": 670464
+      },
+      "heapMB": 27.434203147888184
+    },
+    {
+      "date": "2026-11-25T14:52:59.062Z",
+      "mode": "gpu-direct",
+      "gridSize": 4,
+      "chunks": 16,
+      "runs": 1,
+      "warmup": 0,
+      "mergeImpl": "bitrun",
+      "quads": 817291,
+      "naiveFaces": null,
+      "overflowed": false,
+      "totalMs": {
+        "median": 68.74000000301749,
+        "min": 68.74000000301749,
+        "max": 68.74000000301749
+      },
+      "gpuMs": 45.653639999999996,
+      "readbackMs": 0,
+      "passMs": {
+        "mask": 0.62272,
+        "merge": 44.97316000000001,
+        "finalize": 0.057760000000000006
+      },
+      "bytesUp": 110592,
+      "bytesDown": 512,
+      "samplesMs": [
+        68.74000000301749
+      ],
+      "memory": {
+        "outputBytes": 106955296,
+        "directOutputBytes": 100663808,
+        "directMeshes": 16,
+        "readbackBytes": 6291488,
+        "voxelBytes": 1769472,
+        "voxelChunks": 16,
+        "scratchBytes": 670464
+      },
+      "heapMB": 28.233577728271484
+    },
+    {
+      "date": "2026-11-25T14:53:03.394Z",
+      "mode": "gpu-direct",
+      "gridSize": 5,
+      "chunks": 25,
+      "runs": 1,
+      "warmup": 0,
+      "mergeImpl": "bitrun",
+      "quads": 1251263,
+      "naiveFaces": null,
+      "overflowed": false,
+      "totalMs": {
+        "median": 94.67999999690801,
+        "min": 94.67999999690801,
+        "max": 94.67999999690801
+      },
+      "gpuMs": 63.2214,
+      "readbackMs": 0,
+      "passMs": {
+        "mask": 0.8701200000000001,
+        "merge": 62.265199999999986,
+        "finalize": 0.08608
+      },
+      "bytesUp": 172800,
+      "bytesDown": 800,
+      "samplesMs": [
+        94.67999999690801
+      ],
+      "memory": {
+        "outputBytes": 163578688,
+        "directOutputBytes": 157287200,
+        "directMeshes": 25,
+        "readbackBytes": 6291488,
+        "voxelBytes": 2764800,
+        "voxelChunks": 25,
+        "scratchBytes": 670464
+      },
+      "heapMB": 72.84400177001953
+    },
+    {
+      "date": "2026-11-25T14:53:08.270Z",
+      "mode": "gpu-direct",
+      "gridSize": 6,
+      "chunks": 36,
+      "runs": 1,
+      "warmup": 0,
+      "mergeImpl": "bitrun",
+      "quads": 1816914,
+      "naiveFaces": null,
+      "overflowed": false,
+      "totalMs": {
+        "median": 128.68500000052154,
+        "min": 128.68500000052154,
+        "max": 128.68500000052154
+      },
+      "gpuMs": 84.81844,
+      "readbackMs": 0,
+      "passMs": {
+        "mask": 1.1724799999999995,
+        "merge": 83.53227999999999,
+        "finalize": 0.11367999999999998
+      },
+      "bytesUp": 248832,
+      "bytesDown": 1152,
+      "samplesMs": [
+        128.68500000052154
+      ],
+      "memory": {
+        "outputBytes": 232785056,
+        "directOutputBytes": 226493568,
+        "directMeshes": 36,
+        "readbackBytes": 6291488,
+        "voxelBytes": 3981312,
+        "voxelChunks": 36,
+        "scratchBytes": 670464
+      },
+      "heapMB": 31.477173805236816
+    }
+  ]
+}

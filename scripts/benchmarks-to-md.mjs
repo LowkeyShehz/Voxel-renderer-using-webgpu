@@ -111,7 +111,7 @@ function mergeAbToMarkdown(json, name) {
   const rows = ['legacy', 'bitrun'].map((impl) => [impl, q(impls[impl].mask), q(impls[impl].merge), q(impls[impl].finalize), q(impls[impl].total)]);
   const md = [
     `## Merge A/B: ${name}`, '', metaBlock({ ...json.meta, mergeImpl: 'legacy vs bitrun', mergeWorkgroupSize: json.mergeWorkgroupSize }),
-    `- ${rounds} alternating rounds after ${json.warmup} warm-up, ${json.quadCounts?.bitrun?.toLocaleString?.() ?? '?'} quads per mesh`, '',
+    `- ${rounds} alternating rounds after ${json.warmup} warm-up, ${json.quadCounts?.bitrun?.toLocaleString?.('en-US') ?? '?'} quads per mesh`, '',
     'GPU ms per pass, median [p25–p75].', '',
     table(['merge pass', 'mask', 'merge', 'finalize', 'total'], rows),
     '', `Speed-up of the merge pass: **${num(speedup)}×** (median of per-round ratios ${num(pairedSpeedup)}×).`, '',
@@ -130,7 +130,7 @@ function meshRunsToMarkdown(json, name) {
   const header = ['mode', 'grid', 'runs', 'median ms', 'best ms', 'GPU ms', 'mask', 'merge', 'finalize', 'readback ms', 'quads', '↑ KB', '↓ KB'];
   const rows = runs.map((r) => [
     label(r.mode), `${r.gridSize}×${r.gridSize}`, r.runs, num(r.totalMs.median), num(r.totalMs.min), num(r.gpuMs), num(r.passMs?.mask, 3),
-    num(r.passMs?.merge, 3), num(r.passMs?.finalize, 3), num(r.readbackMs), r.quads?.toLocaleString?.() ?? '–', num(r.bytesUp / 1024, 1), num(r.bytesDown / 1024, 1),
+    num(r.passMs?.merge, 3), num(r.passMs?.finalize, 3), num(r.readbackMs), r.quads?.toLocaleString?.('en-US') ?? '–', num(r.bytesUp / 1024, 1), num(r.bytesDown / 1024, 1),
   ]);
   const memHeader = ['mode', 'grid', 'zero-copy MB', 'chunks', 'MB per chunk', 'readback MB', 'voxels MB', 'voxel chunks', 'scratch MB', 'JS heap MB'];
   const memRows = runs.map((r) => {
