@@ -37,6 +37,10 @@ New footnote: *Medians of 55 alternating rounds on each GPU; mask pass 0.066 ms 
 Spread on the RX 5600 XT, if wanted: legacy 6.26–6.42 ms and bit-run 2.16–2.28 ms (25th–75th percentile).
 The median of the per-round ratios is also 2.83×.
 
+Repeatability: a second A/B run 28 minutes later (`merge-ab-2026-11-25T13-59-47-945Z.json`) gave legacy 6.37 ms,
+bit-run 2.17 ms, 2.93× (per-round 2.84×). Keep the first run in the table and add to the footnote: *"A repeat
+run gave 2.9×."* Or report the range: "2.8–2.9× over two sessions".
+
 ## 3. Section VI.D: add after the laptop sentence
 
 > On the RX 5600 XT, timed the same way, the bit-run merge took 2.23 ms against 6.30 ms,

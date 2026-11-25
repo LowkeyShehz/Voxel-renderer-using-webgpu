@@ -1,0 +1,1317 @@
+{
+  "kind": "merge-ab",
+  "rounds": 55,
+  "warmup": 5,
+  "mergeWorkgroupSize": 8,
+  "quadCounts": {
+    "legacy": 50112,
+    "bitrun": 50112
+  },
+  "summary": {
+    "rounds": 55,
+    "impls": {
+      "legacy": {
+        "mask": {
+          "median": 0.03276,
+          "p25": 0.03208,
+          "p75": 0.0331,
+          "min": 0.03104,
+          "max": 0.38768,
+          "n": 55
+        },
+        "merge": {
+          "median": 6.37016,
+          "p25": 6.21686,
+          "p75": 6.47112,
+          "min": 6.10636,
+          "max": 6.96336,
+          "n": 55
+        },
+        "finalize": {
+          "median": 0.00296,
+          "p25": 0.00292,
+          "p75": 0.00318,
+          "min": 0.00272,
+          "max": 0.00352,
+          "n": 55
+        },
+        "total": {
+          "median": 6.409079999999999,
+          "p25": 6.25826,
+          "p75": 6.512080000000001,
+          "min": 6.14136,
+          "max": 7.0008,
+          "n": 55
+        }
+      },
+      "bitrun": {
+        "mask": {
+          "median": 0.03256,
+          "p25": 0.03148,
+          "p75": 0.03394,
+          "min": 0.03108,
+          "max": 0.03468,
+          "n": 55
+        },
+        "merge": {
+          "median": 2.17252,
+          "p25": 2.1039000000000003,
+          "p75": 2.30452,
+          "min": 2.05756,
+          "max": 2.38968,
+          "n": 55
+        },
+        "finalize": {
+          "median": 0.00296,
+          "p25": 0.00292,
+          "p75": 0.00316,
+          "min": 0.00268,
+          "max": 0.00352,
+          "n": 55
+        },
+        "total": {
+          "median": 2.20828,
+          "p25": 2.1382600000000003,
+          "p75": 2.3414,
+          "min": 2.09244,
+          "max": 2.42696,
+          "n": 55
+        }
+      }
+    },
+    "speedup": 2.9321525233369545,
+    "pairedSpeedup": 2.841375723994477
+  },
+  "samples": [
+    {
+      "round": 0,
+      "impl": "bitrun",
+      "first": true,
+      "totalMs": 2.37728,
+      "passMs": {
+        "mask": 0.03468,
+        "merge": 2.33964,
+        "finalize": 0.00296
+      }
+    },
+    {
+      "round": 0,
+      "impl": "legacy",
+      "first": false,
+      "totalMs": 6.36956,
+      "passMs": {
+        "mask": 0.03252,
+        "merge": 6.33424,
+        "finalize": 0.0028
+      }
+    },
+    {
+      "round": 1,
+      "impl": "legacy",
+      "first": true,
+      "totalMs": 6.6047199999999995,
+      "passMs": {
+        "mask": 0.0332,
+        "merge": 6.56856,
+        "finalize": 0.00296
+      }
+    },
+    {
+      "round": 1,
+      "impl": "bitrun",
+      "first": false,
+      "totalMs": 2.18036,
+      "passMs": {
+        "mask": 0.03152,
+        "merge": 2.14588,
+        "finalize": 0.00296
+      }
+    },
+    {
+      "round": 2,
+      "impl": "bitrun",
+      "first": true,
+      "totalMs": 2.2939599999999998,
+      "passMs": {
+        "mask": 0.03244,
+        "merge": 2.25868,
+        "finalize": 0.00284
+      }
+    },
+    {
+      "round": 2,
+      "impl": "legacy",
+      "first": false,
+      "totalMs": 6.428599999999999,
+      "passMs": {
+        "mask": 0.03292,
+        "merge": 6.39276,
+        "finalize": 0.00292
+      }
+    },
+    {
+      "round": 3,
+      "impl": "legacy",
+      "first": true,
+      "totalMs": 6.52024,
+      "passMs": {
+        "mask": 0.03436,
+        "merge": 6.48268,
+        "finalize": 0.0032
+      }
+    },
+    {
+      "round": 3,
+      "impl": "bitrun",
+      "first": false,
+      "totalMs": 2.15548,
+      "passMs": {
+        "mask": 0.0312,
+        "merge": 2.12132,
+        "finalize": 0.00296
+      }
+    },
+    {
+      "round": 4,
+      "impl": "bitrun",
+      "first": true,
+      "totalMs": 2.28184,
+      "passMs": {
+        "mask": 0.03348,
+        "merge": 2.24552,
+        "finalize": 0.00284
+      }
+    },
+    {
+      "round": 4,
+      "impl": "legacy",
+      "first": false,
+      "totalMs": 6.245519999999999,
+      "passMs": {
+        "mask": 0.0318,
+        "merge": 6.21076,
+        "finalize": 0.00296
+      }
+    },
+    {
+      "round": 5,
+      "impl": "legacy",
+      "first": true,
+      "totalMs": 6.259600000000001,
+      "passMs": {
+        "mask": 0.0316,
+        "merge": 6.22512,
+        "finalize": 0.00288
+      }
+    },
+    {
+      "round": 5,
+      "impl": "bitrun",
+      "first": false,
+      "totalMs": 2.0984,
+      "passMs": {
+        "mask": 0.03148,
+        "merge": 2.06396,
+        "finalize": 0.00296
+      }
+    },
+    {
+      "round": 6,
+      "impl": "bitrun",
+      "first": true,
+      "totalMs": 2.30592,
+      "passMs": {
+        "mask": 0.03288,
+        "merge": 2.27024,
+        "finalize": 0.0028
+      }
+    },
+    {
+      "round": 6,
+      "impl": "legacy",
+      "first": false,
+      "totalMs": 6.406000000000001,
+      "passMs": {
+        "mask": 0.03308,
+        "merge": 6.37016,
+        "finalize": 0.00276
+      }
+    },
+    {
+      "round": 7,
+      "impl": "legacy",
+      "first": true,
+      "totalMs": 6.32428,
+      "passMs": {
+        "mask": 0.03264,
+        "merge": 6.28868,
+        "finalize": 0.00296
+      }
+    },
+    {
+      "round": 7,
+      "impl": "bitrun",
+      "first": false,
+      "totalMs": 2.0974,
+      "passMs": {
+        "mask": 0.03132,
+        "merge": 2.06312,
+        "finalize": 0.00296
+      }
+    },
+    {
+      "round": 8,
+      "impl": "bitrun",
+      "first": true,
+      "totalMs": 2.3112,
+      "passMs": {
+        "mask": 0.033,
+        "merge": 2.27508,
+        "finalize": 0.00312
+      }
+    },
+    {
+      "round": 8,
+      "impl": "legacy",
+      "first": false,
+      "totalMs": 6.20764,
+      "passMs": {
+        "mask": 0.03168,
+        "merge": 6.17296,
+        "finalize": 0.003
+      }
+    },
+    {
+      "round": 9,
+      "impl": "legacy",
+      "first": true,
+      "totalMs": 6.54828,
+      "passMs": {
+        "mask": 0.03284,
+        "merge": 6.51248,
+        "finalize": 0.00296
+      }
+    },
+    {
+      "round": 9,
+      "impl": "bitrun",
+      "first": false,
+      "totalMs": 2.19832,
+      "passMs": {
+        "mask": 0.03148,
+        "merge": 2.16408,
+        "finalize": 0.00276
+      }
+    },
+    {
+      "round": 10,
+      "impl": "bitrun",
+      "first": true,
+      "totalMs": 2.26544,
+      "passMs": {
+        "mask": 0.03192,
+        "merge": 2.23068,
+        "finalize": 0.00284
+      }
+    },
+    {
+      "round": 10,
+      "impl": "legacy",
+      "first": false,
+      "totalMs": 6.37352,
+      "passMs": {
+        "mask": 0.03228,
+        "merge": 6.3382,
+        "finalize": 0.00304
+      }
+    },
+    {
+      "round": 11,
+      "impl": "legacy",
+      "first": true,
+      "totalMs": 6.442519999999999,
+      "passMs": {
+        "mask": 0.03464,
+        "merge": 6.40492,
+        "finalize": 0.00296
+      }
+    },
+    {
+      "round": 11,
+      "impl": "bitrun",
+      "first": false,
+      "totalMs": 2.16584,
+      "passMs": {
+        "mask": 0.0314,
+        "merge": 2.13136,
+        "finalize": 0.00308
+      }
+    },
+    {
+      "round": 12,
+      "impl": "bitrun",
+      "first": true,
+      "totalMs": 2.38116,
+      "passMs": {
+        "mask": 0.03404,
+        "merge": 2.34396,
+        "finalize": 0.00316
+      }
+    },
+    {
+      "round": 12,
+      "impl": "legacy",
+      "first": false,
+      "totalMs": 6.175039999999999,
+      "passMs": {
+        "mask": 0.03276,
+        "merge": 6.13932,
+        "finalize": 0.00296
+      }
+    },
+    {
+      "round": 13,
+      "impl": "legacy",
+      "first": true,
+      "totalMs": 6.5019599999999995,
+      "passMs": {
+        "mask": 0.03292,
+        "merge": 6.46604,
+        "finalize": 0.003
+      }
+    },
+    {
+      "round": 13,
+      "impl": "bitrun",
+      "first": false,
+      "totalMs": 2.0965200000000004,
+      "passMs": {
+        "mask": 0.03148,
+        "merge": 2.06204,
+        "finalize": 0.003
+      }
+    },
+    {
+      "round": 14,
+      "impl": "bitrun",
+      "first": true,
+      "totalMs": 2.3539600000000003,
+      "passMs": {
+        "mask": 0.03356,
+        "merge": 2.31748,
+        "finalize": 0.00292
+      }
+    },
+    {
+      "round": 14,
+      "impl": "legacy",
+      "first": false,
+      "totalMs": 6.595160000000001,
+      "passMs": {
+        "mask": 0.0334,
+        "merge": 6.55876,
+        "finalize": 0.003
+      }
+    },
+    {
+      "round": 15,
+      "impl": "legacy",
+      "first": true,
+      "totalMs": 6.44832,
+      "passMs": {
+        "mask": 0.0328,
+        "merge": 6.41252,
+        "finalize": 0.003
+      }
+    },
+    {
+      "round": 15,
+      "impl": "bitrun",
+      "first": false,
+      "totalMs": 2.1409999999999996,
+      "passMs": {
+        "mask": 0.03164,
+        "merge": 2.1064,
+        "finalize": 0.00296
+      }
+    },
+    {
+      "round": 16,
+      "impl": "bitrun",
+      "first": true,
+      "totalMs": 2.3680000000000003,
+      "passMs": {
+        "mask": 0.0346,
+        "merge": 2.33036,
+        "finalize": 0.00304
+      }
+    },
+    {
+      "round": 16,
+      "impl": "legacy",
+      "first": false,
+      "totalMs": 6.2125200000000005,
+      "passMs": {
+        "mask": 0.03284,
+        "merge": 6.17692,
+        "finalize": 0.00276
+      }
+    },
+    {
+      "round": 17,
+      "impl": "legacy",
+      "first": true,
+      "totalMs": 6.512760000000001,
+      "passMs": {
+        "mask": 0.03328,
+        "merge": 6.4762,
+        "finalize": 0.00328
+      }
+    },
+    {
+      "round": 17,
+      "impl": "bitrun",
+      "first": false,
+      "totalMs": 2.09244,
+      "passMs": {
+        "mask": 0.03164,
+        "merge": 2.05756,
+        "finalize": 0.00324
+      }
+    },
+    {
+      "round": 18,
+      "impl": "bitrun",
+      "first": true,
+      "totalMs": 2.32928,
+      "passMs": {
+        "mask": 0.0326,
+        "merge": 2.29376,
+        "finalize": 0.00292
+      }
+    },
+    {
+      "round": 18,
+      "impl": "legacy",
+      "first": false,
+      "totalMs": 6.45264,
+      "passMs": {
+        "mask": 0.03248,
+        "merge": 6.41692,
+        "finalize": 0.00324
+      }
+    },
+    {
+      "round": 19,
+      "impl": "legacy",
+      "first": true,
+      "totalMs": 6.48464,
+      "passMs": {
+        "mask": 0.03276,
+        "merge": 6.4486,
+        "finalize": 0.00328
+      }
+    },
+    {
+      "round": 19,
+      "impl": "bitrun",
+      "first": false,
+      "totalMs": 2.17536,
+      "passMs": {
+        "mask": 0.03144,
+        "merge": 2.14116,
+        "finalize": 0.00276
+      }
+    },
+    {
+      "round": 20,
+      "impl": "bitrun",
+      "first": true,
+      "totalMs": 2.3565199999999997,
+      "passMs": {
+        "mask": 0.03368,
+        "merge": 2.3194,
+        "finalize": 0.00344
+      }
+    },
+    {
+      "round": 20,
+      "impl": "legacy",
+      "first": false,
+      "totalMs": 6.409079999999999,
+      "passMs": {
+        "mask": 0.03336,
+        "merge": 6.37252,
+        "finalize": 0.0032
+      }
+    },
+    {
+      "round": 21,
+      "impl": "legacy",
+      "first": true,
+      "totalMs": 7.0008,
+      "passMs": {
+        "mask": 0.03428,
+        "merge": 6.96336,
+        "finalize": 0.00316
+      }
+    },
+    {
+      "round": 21,
+      "impl": "bitrun",
+      "first": false,
+      "totalMs": 2.10548,
+      "passMs": {
+        "mask": 0.03428,
+        "merge": 2.06832,
+        "finalize": 0.00288
+      }
+    },
+    {
+      "round": 22,
+      "impl": "bitrun",
+      "first": true,
+      "totalMs": 2.3290800000000003,
+      "passMs": {
+        "mask": 0.03288,
+        "merge": 2.29332,
+        "finalize": 0.00288
+      }
+    },
+    {
+      "round": 22,
+      "impl": "legacy",
+      "first": false,
+      "totalMs": 6.3804799999999995,
+      "passMs": {
+        "mask": 0.03268,
+        "merge": 6.3446,
+        "finalize": 0.0032
+      }
+    },
+    {
+      "round": 23,
+      "impl": "legacy",
+      "first": true,
+      "totalMs": 6.3408,
+      "passMs": {
+        "mask": 0.03276,
+        "merge": 6.30504,
+        "finalize": 0.003
+      }
+    },
+    {
+      "round": 23,
+      "impl": "bitrun",
+      "first": false,
+      "totalMs": 2.1865999999999994,
+      "passMs": {
+        "mask": 0.03176,
+        "merge": 2.15188,
+        "finalize": 0.00296
+      }
+    },
+    {
+      "round": 24,
+      "impl": "bitrun",
+      "first": true,
+      "totalMs": 2.31804,
+      "passMs": {
+        "mask": 0.03372,
+        "merge": 2.28088,
+        "finalize": 0.00344
+      }
+    },
+    {
+      "round": 24,
+      "impl": "legacy",
+      "first": false,
+      "totalMs": 6.24268,
+      "passMs": {
+        "mask": 0.03212,
+        "merge": 6.20736,
+        "finalize": 0.0032
+      }
+    },
+    {
+      "round": 25,
+      "impl": "legacy",
+      "first": true,
+      "totalMs": 6.71068,
+      "passMs": {
+        "mask": 0.03148,
+        "merge": 6.6758,
+        "finalize": 0.0034
+      }
+    },
+    {
+      "round": 25,
+      "impl": "bitrun",
+      "first": false,
+      "totalMs": 2.0986000000000002,
+      "passMs": {
+        "mask": 0.0344,
+        "merge": 2.061,
+        "finalize": 0.0032
+      }
+    },
+    {
+      "round": 26,
+      "impl": "bitrun",
+      "first": true,
+      "totalMs": 2.33764,
+      "passMs": {
+        "mask": 0.03324,
+        "merge": 2.30104,
+        "finalize": 0.00336
+      }
+    },
+    {
+      "round": 26,
+      "impl": "legacy",
+      "first": false,
+      "totalMs": 6.35496,
+      "passMs": {
+        "mask": 0.03324,
+        "merge": 6.31848,
+        "finalize": 0.00324
+      }
+    },
+    {
+      "round": 27,
+      "impl": "legacy",
+      "first": true,
+      "totalMs": 6.19844,
+      "passMs": {
+        "mask": 0.0314,
+        "merge": 6.16432,
+        "finalize": 0.00272
+      }
+    },
+    {
+      "round": 27,
+      "impl": "bitrun",
+      "first": false,
+      "totalMs": 2.09756,
+      "passMs": {
+        "mask": 0.0312,
+        "merge": 2.06344,
+        "finalize": 0.00292
+      }
+    },
+    {
+      "round": 28,
+      "impl": "bitrun",
+      "first": true,
+      "totalMs": 2.17204,
+      "passMs": {
+        "mask": 0.03132,
+        "merge": 2.13796,
+        "finalize": 0.00276
+      }
+    },
+    {
+      "round": 28,
+      "impl": "legacy",
+      "first": false,
+      "totalMs": 6.15988,
+      "passMs": {
+        "mask": 0.03124,
+        "merge": 6.12548,
+        "finalize": 0.00316
+      }
+    },
+    {
+      "round": 29,
+      "impl": "legacy",
+      "first": true,
+      "totalMs": 6.779,
+      "passMs": {
+        "mask": 0.03176,
+        "merge": 6.74372,
+        "finalize": 0.00352
+      }
+    },
+    {
+      "round": 29,
+      "impl": "bitrun",
+      "first": false,
+      "totalMs": 2.42696,
+      "passMs": {
+        "mask": 0.0346,
+        "merge": 2.38968,
+        "finalize": 0.00268
+      }
+    },
+    {
+      "round": 30,
+      "impl": "bitrun",
+      "first": true,
+      "totalMs": 2.3236,
+      "passMs": {
+        "mask": 0.03328,
+        "merge": 2.28716,
+        "finalize": 0.00316
+      }
+    },
+    {
+      "round": 30,
+      "impl": "legacy",
+      "first": false,
+      "totalMs": 6.423399999999999,
+      "passMs": {
+        "mask": 0.03304,
+        "merge": 6.38744,
+        "finalize": 0.00292
+      }
+    },
+    {
+      "round": 31,
+      "impl": "legacy",
+      "first": true,
+      "totalMs": 6.2696,
+      "passMs": {
+        "mask": 0.03112,
+        "merge": 6.23528,
+        "finalize": 0.0032
+      }
+    },
+    {
+      "round": 31,
+      "impl": "bitrun",
+      "first": false,
+      "totalMs": 2.16076,
+      "passMs": {
+        "mask": 0.03184,
+        "merge": 2.12568,
+        "finalize": 0.00324
+      }
+    },
+    {
+      "round": 32,
+      "impl": "bitrun",
+      "first": true,
+      "totalMs": 2.3366399999999996,
+      "passMs": {
+        "mask": 0.034,
+        "merge": 2.29948,
+        "finalize": 0.00316
+      }
+    },
+    {
+      "round": 32,
+      "impl": "legacy",
+      "first": false,
+      "totalMs": 6.14136,
+      "passMs": {
+        "mask": 0.03224,
+        "merge": 6.10636,
+        "finalize": 0.00276
+      }
+    },
+    {
+      "round": 33,
+      "impl": "legacy",
+      "first": true,
+      "totalMs": 6.40532,
+      "passMs": {
+        "mask": 0.0328,
+        "merge": 6.36956,
+        "finalize": 0.00296
+      }
+    },
+    {
+      "round": 33,
+      "impl": "bitrun",
+      "first": false,
+      "totalMs": 2.1386800000000004,
+      "passMs": {
+        "mask": 0.03148,
+        "merge": 2.10428,
+        "finalize": 0.00292
+      }
+    },
+    {
+      "round": 34,
+      "impl": "bitrun",
+      "first": true,
+      "totalMs": 2.3502,
+      "passMs": {
+        "mask": 0.03456,
+        "merge": 2.31272,
+        "finalize": 0.00292
+      }
+    },
+    {
+      "round": 34,
+      "impl": "legacy",
+      "first": false,
+      "totalMs": 6.41244,
+      "passMs": {
+        "mask": 0.03284,
+        "merge": 6.37688,
+        "finalize": 0.00272
+      }
+    },
+    {
+      "round": 35,
+      "impl": "legacy",
+      "first": true,
+      "totalMs": 6.587960000000001,
+      "passMs": {
+        "mask": 0.03352,
+        "merge": 6.55128,
+        "finalize": 0.00316
+      }
+    },
+    {
+      "round": 35,
+      "impl": "bitrun",
+      "first": false,
+      "totalMs": 2.13784,
+      "passMs": {
+        "mask": 0.0314,
+        "merge": 2.10352,
+        "finalize": 0.00292
+      }
+    },
+    {
+      "round": 36,
+      "impl": "bitrun",
+      "first": true,
+      "totalMs": 2.36284,
+      "passMs": {
+        "mask": 0.03424,
+        "merge": 2.32508,
+        "finalize": 0.00352
+      }
+    },
+    {
+      "round": 36,
+      "impl": "legacy",
+      "first": false,
+      "totalMs": 6.5114,
+      "passMs": {
+        "mask": 0.38768,
+        "merge": 6.12076,
+        "finalize": 0.00296
+      }
+    },
+    {
+      "round": 37,
+      "impl": "legacy",
+      "first": true,
+      "totalMs": 6.583200000000001,
+      "passMs": {
+        "mask": 0.03252,
+        "merge": 6.54792,
+        "finalize": 0.00276
+      }
+    },
+    {
+      "round": 37,
+      "impl": "bitrun",
+      "first": false,
+      "totalMs": 2.0964,
+      "passMs": {
+        "mask": 0.03148,
+        "merge": 2.06196,
+        "finalize": 0.00296
+      }
+    },
+    {
+      "round": 38,
+      "impl": "bitrun",
+      "first": true,
+      "totalMs": 2.38756,
+      "passMs": {
+        "mask": 0.03416,
+        "merge": 2.3504,
+        "finalize": 0.003
+      }
+    },
+    {
+      "round": 38,
+      "impl": "legacy",
+      "first": false,
+      "totalMs": 6.540279999999999,
+      "passMs": {
+        "mask": 0.03424,
+        "merge": 6.50284,
+        "finalize": 0.0032
+      }
+    },
+    {
+      "round": 39,
+      "impl": "legacy",
+      "first": true,
+      "totalMs": 6.256919999999999,
+      "passMs": {
+        "mask": 0.03104,
+        "merge": 6.22296,
+        "finalize": 0.00292
+      }
+    },
+    {
+      "round": 39,
+      "impl": "bitrun",
+      "first": false,
+      "totalMs": 2.09624,
+      "passMs": {
+        "mask": 0.03168,
+        "merge": 2.0614,
+        "finalize": 0.00316
+      }
+    },
+    {
+      "round": 40,
+      "impl": "bitrun",
+      "first": true,
+      "totalMs": 2.2950000000000004,
+      "passMs": {
+        "mask": 0.03256,
+        "merge": 2.25932,
+        "finalize": 0.00312
+      }
+    },
+    {
+      "round": 40,
+      "impl": "legacy",
+      "first": false,
+      "totalMs": 6.23592,
+      "passMs": {
+        "mask": 0.03172,
+        "merge": 6.20096,
+        "finalize": 0.00324
+      }
+    },
+    {
+      "round": 41,
+      "impl": "legacy",
+      "first": true,
+      "totalMs": 6.46396,
+      "passMs": {
+        "mask": 0.03312,
+        "merge": 6.42792,
+        "finalize": 0.00292
+      }
+    },
+    {
+      "round": 41,
+      "impl": "bitrun",
+      "first": false,
+      "totalMs": 2.1518,
+      "passMs": {
+        "mask": 0.03152,
+        "merge": 2.11708,
+        "finalize": 0.0032
+      }
+    },
+    {
+      "round": 42,
+      "impl": "bitrun",
+      "first": true,
+      "totalMs": 2.35436,
+      "passMs": {
+        "mask": 0.0338,
+        "merge": 2.31704,
+        "finalize": 0.00352
+      }
+    },
+    {
+      "round": 42,
+      "impl": "legacy",
+      "first": false,
+      "totalMs": 6.489920000000001,
+      "passMs": {
+        "mask": 0.03308,
+        "merge": 6.45408,
+        "finalize": 0.00276
+      }
+    },
+    {
+      "round": 43,
+      "impl": "legacy",
+      "first": true,
+      "totalMs": 6.54352,
+      "passMs": {
+        "mask": 0.03308,
+        "merge": 6.50724,
+        "finalize": 0.0032
+      }
+    },
+    {
+      "round": 43,
+      "impl": "bitrun",
+      "first": false,
+      "totalMs": 2.1461599999999996,
+      "passMs": {
+        "mask": 0.03164,
+        "merge": 2.11128,
+        "finalize": 0.00324
+      }
+    },
+    {
+      "round": 44,
+      "impl": "bitrun",
+      "first": true,
+      "totalMs": 2.34516,
+      "passMs": {
+        "mask": 0.03416,
+        "merge": 2.308,
+        "finalize": 0.003
+      }
+    },
+    {
+      "round": 44,
+      "impl": "legacy",
+      "first": false,
+      "totalMs": 6.23832,
+      "passMs": {
+        "mask": 0.03236,
+        "merge": 6.20296,
+        "finalize": 0.003
+      }
+    },
+    {
+      "round": 45,
+      "impl": "legacy",
+      "first": true,
+      "totalMs": 6.66696,
+      "passMs": {
+        "mask": 0.0338,
+        "merge": 6.6302,
+        "finalize": 0.00296
+      }
+    },
+    {
+      "round": 45,
+      "impl": "bitrun",
+      "first": false,
+      "totalMs": 2.09984,
+      "passMs": {
+        "mask": 0.03136,
+        "merge": 2.06556,
+        "finalize": 0.00292
+      }
+    },
+    {
+      "round": 46,
+      "impl": "bitrun",
+      "first": true,
+      "totalMs": 2.3978800000000002,
+      "passMs": {
+        "mask": 0.03392,
+        "merge": 2.36096,
+        "finalize": 0.003
+      }
+    },
+    {
+      "round": 46,
+      "impl": "legacy",
+      "first": false,
+      "totalMs": 6.52492,
+      "passMs": {
+        "mask": 0.03376,
+        "merge": 6.4882,
+        "finalize": 0.00296
+      }
+    },
+    {
+      "round": 47,
+      "impl": "legacy",
+      "first": true,
+      "totalMs": 6.22704,
+      "passMs": {
+        "mask": 0.03156,
+        "merge": 6.19276,
+        "finalize": 0.00272
+      }
+    },
+    {
+      "round": 47,
+      "impl": "bitrun",
+      "first": false,
+      "totalMs": 2.09524,
+      "passMs": {
+        "mask": 0.03108,
+        "merge": 2.0614,
+        "finalize": 0.00276
+      }
+    },
+    {
+      "round": 48,
+      "impl": "bitrun",
+      "first": true,
+      "totalMs": 2.3633200000000003,
+      "passMs": {
+        "mask": 0.0346,
+        "merge": 2.32524,
+        "finalize": 0.00348
+      }
+    },
+    {
+      "round": 48,
+      "impl": "legacy",
+      "first": false,
+      "totalMs": 6.184200000000001,
+      "passMs": {
+        "mask": 0.03204,
+        "merge": 6.149,
+        "finalize": 0.00316
+      }
+    },
+    {
+      "round": 49,
+      "impl": "legacy",
+      "first": true,
+      "totalMs": 6.46612,
+      "passMs": {
+        "mask": 0.03292,
+        "merge": 6.43044,
+        "finalize": 0.00276
+      }
+    },
+    {
+      "round": 49,
+      "impl": "bitrun",
+      "first": false,
+      "totalMs": 2.1772400000000003,
+      "passMs": {
+        "mask": 0.0316,
+        "merge": 2.14252,
+        "finalize": 0.00312
+      }
+    },
+    {
+      "round": 50,
+      "impl": "bitrun",
+      "first": true,
+      "totalMs": 2.20828,
+      "passMs": {
+        "mask": 0.03272,
+        "merge": 2.17252,
+        "finalize": 0.00304
+      }
+    },
+    {
+      "round": 50,
+      "impl": "legacy",
+      "first": false,
+      "totalMs": 6.184,
+      "passMs": {
+        "mask": 0.03148,
+        "merge": 6.14956,
+        "finalize": 0.00296
+      }
+    },
+    {
+      "round": 51,
+      "impl": "legacy",
+      "first": true,
+      "totalMs": 6.26964,
+      "passMs": {
+        "mask": 0.03144,
+        "merge": 6.2352,
+        "finalize": 0.003
+      }
+    },
+    {
+      "round": 51,
+      "impl": "bitrun",
+      "first": false,
+      "totalMs": 2.10072,
+      "passMs": {
+        "mask": 0.0314,
+        "merge": 2.06628,
+        "finalize": 0.00304
+      }
+    },
+    {
+      "round": 52,
+      "impl": "bitrun",
+      "first": true,
+      "totalMs": 2.3165199999999997,
+      "passMs": {
+        "mask": 0.03436,
+        "merge": 2.2792,
+        "finalize": 0.00296
+      }
+    },
+    {
+      "round": 52,
+      "impl": "legacy",
+      "first": false,
+      "totalMs": 6.26596,
+      "passMs": {
+        "mask": 0.03236,
+        "merge": 6.23084,
+        "finalize": 0.00276
+      }
+    },
+    {
+      "round": 53,
+      "impl": "legacy",
+      "first": true,
+      "totalMs": 6.492640000000001,
+      "passMs": {
+        "mask": 0.03256,
+        "merge": 6.45732,
+        "finalize": 0.00276
+      }
+    },
+    {
+      "round": 53,
+      "impl": "bitrun",
+      "first": false,
+      "totalMs": 2.09448,
+      "passMs": {
+        "mask": 0.03116,
+        "merge": 2.0606,
+        "finalize": 0.00272
+      }
+    },
+    {
+      "round": 54,
+      "impl": "bitrun",
+      "first": true,
+      "totalMs": 2.3551200000000003,
+      "passMs": {
+        "mask": 0.03396,
+        "merge": 2.31768,
+        "finalize": 0.00348
+      }
+    },
+    {
+      "round": 54,
+      "impl": "legacy",
+      "first": false,
+      "totalMs": 6.3346,
+      "passMs": {
+        "mask": 0.03252,
+        "merge": 6.29904,
+        "finalize": 0.00304
+      }
+    }
+  ],
+  "meta": {
+    "date": "2026-11-25T13:59:46.425Z",
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "gpu": {
+      "vendor": "amd",
+      "architecture": "rdna-1",
+      "device": "0x731f",
+      "description": "AMD Radeon RX 5600 XT (RADV NAVI10)",
+      "timestampQuery": true
+    },
+    "hardwareConcurrency": 6,
+    "chunkSize": 96,
+    "display": {
+      "devicePixelRatio": 1,
+      "viewport": [
+        1920,
+        999
+      ]
+    }
+  }
+}
