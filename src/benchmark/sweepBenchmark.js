@@ -61,7 +61,9 @@ export async function runSweep({
           onProgress: (done, n) => onProgress?.(`${label}: edit ${done}/${n}`),
         });
 
-        const run = { gridSize, mode, repeat, initial: { ...initial, perChunkMs: perChunk.map((r) => r.totalMs) }, edit };
+        // JS heap after the run (Chrome only), to see whether memory grows across a sweep.
+        const heapMB = globalThis.performance?.memory ? performance.memory.usedJSHeapSize / 1048576 : null;
+        const run = { gridSize, mode, repeat, initial: { ...initial, perChunkMs: perChunk.map((r) => r.totalMs) }, edit, heapMB };
         runs.push(run);
         onRun?.(run, runs);
       }

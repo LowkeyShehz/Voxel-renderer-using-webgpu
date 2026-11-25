@@ -1,0 +1,2633 @@
+{
+  "kind": "sweep",
+  "meta": {
+    "date": "2026-11-25T13:52:39.542Z",
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+    "gpu": {
+      "vendor": "amd",
+      "architecture": "rdna-1",
+      "device": "0x731f",
+      "description": "AMD Radeon RX 5600 XT (RADV NAVI10)",
+      "timestampQuery": true
+    },
+    "hardwareConcurrency": 6,
+    "deviceMemoryGB": 16,
+    "display": {
+      "devicePixelRatio": 1,
+      "viewport": [
+        1920,
+        999
+      ]
+    },
+    "chunkSize": 96,
+    "mergeImpl": "bitrun",
+    "mergeWorkgroupSize": 8,
+    "grids": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "modes": [
+      "cpu",
+      "gpu-readback",
+      "gpu-direct"
+    ],
+    "repeats": 3,
+    "edits": 40,
+    "intervalMs": 250,
+    "seed": 1337,
+    "radius": 24
+  },
+  "idle": null,
+  "summary": [
+    {
+      "gridSize": 1,
+      "chunks": 1,
+      "mode": "cpu",
+      "repeats": 3,
+      "unreliable": 0,
+      "metrics": {
+        "initialMs": {
+          "median": 120.63999999966472,
+          "min": 120.43500000005588,
+          "max": 153.875,
+          "n": 3
+        },
+        "editMs": {
+          "median": 103.18999999994412,
+          "min": 102.96749999979511,
+          "max": 103.19249999988824,
+          "n": 3
+        },
+        "latencyMs": {
+          "median": 105.4749999998603,
+          "min": 105.22249999991618,
+          "max": 105.50499999988824,
+          "n": 3
+        },
+        "frameP99": {
+          "median": 100,
+          "min": 99.99499999999534,
+          "max": 100,
+          "n": 3
+        },
+        "frameMax": {
+          "median": 116.66499999997905,
+          "min": 100,
+          "max": 116.66500000000815,
+          "n": 3
+        },
+        "hitches": {
+          "median": 39,
+          "min": 38,
+          "max": 40,
+          "n": 3
+        },
+        "over33": {
+          "median": 39,
+          "min": 38,
+          "max": 41,
+          "n": 3
+        },
+        "upKB": {
+          "median": 3943.294921875,
+          "min": 3943.294921875,
+          "max": 3943.294921875,
+          "n": 3
+        },
+        "downKB": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 3
+        },
+        "gpuMs": null,
+        "pass_mask": null,
+        "pass_merge": null,
+        "pass_finalize": null
+      }
+    },
+    {
+      "gridSize": 1,
+      "chunks": 1,
+      "mode": "gpu-readback",
+      "repeats": 3,
+      "unreliable": 0,
+      "metrics": {
+        "initialMs": {
+          "median": 16.699999999720603,
+          "min": 16.08999999985099,
+          "max": 19.795000000391155,
+          "n": 3
+        },
+        "editMs": {
+          "median": 11.609999999869615,
+          "min": 11.495000000111759,
+          "max": 12.46750000002794,
+          "n": 3
+        },
+        "latencyMs": {
+          "median": 11.695000000065193,
+          "min": 11.590000000083819,
+          "max": 12.550000000279397,
+          "n": 3
+        },
+        "frameP99": {
+          "median": 16.67000000004191,
+          "min": 16.67000000004191,
+          "max": 16.673500000004424,
+          "n": 3
+        },
+        "frameMax": {
+          "median": 16.675000000046566,
+          "min": 16.67499999998836,
+          "max": 16.675000000046566,
+          "n": 3
+        },
+        "hitches": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 3
+        },
+        "over33": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 3
+        },
+        "upKB": {
+          "median": 3189.47021484375,
+          "min": 3189.47021484375,
+          "max": 3189.47021484375,
+          "n": 3
+        },
+        "downKB": {
+          "median": 3154.6359375,
+          "min": 3154.6359375,
+          "max": 3154.6359375,
+          "n": 3
+        },
+        "gpuMs": {
+          "median": 3.9123400000000004,
+          "min": 3.8914,
+          "max": 3.9229600000000002,
+          "n": 3
+        },
+        "pass_mask": {
+          "median": 0.049699999999999994,
+          "min": 0.04954,
+          "max": 0.05,
+          "n": 3
+        },
+        "pass_merge": {
+          "median": 3.85832,
+          "min": 3.8376799999999998,
+          "max": 3.86502,
+          "n": 3
+        },
+        "pass_finalize": {
+          "median": 0.00432,
+          "min": 0.00432,
+          "max": 0.00436,
+          "n": 3
+        }
+      }
+    },
+    {
+      "gridSize": 1,
+      "chunks": 1,
+      "mode": "gpu-direct",
+      "repeats": 3,
+      "unreliable": 0,
+      "metrics": {
+        "initialMs": {
+          "median": 6.165000000037253,
+          "min": 5.365000000223517,
+          "max": 8.020000000018626,
+          "n": 3
+        },
+        "editMs": {
+          "median": 4.937500000232831,
+          "min": 4.669999999925494,
+          "max": 6.2700000000186265,
+          "n": 3
+        },
+        "latencyMs": {
+          "median": 7.002499999944121,
+          "min": 6.535000000149012,
+          "max": 7.28000000002794,
+          "n": 3
+        },
+        "frameP99": {
+          "median": 16.67000000004191,
+          "min": 16.67000000004191,
+          "max": 16.67000000004191,
+          "n": 3
+        },
+        "frameMax": {
+          "median": 16.67499999998836,
+          "min": 16.67499999998836,
+          "max": 16.675000000046566,
+          "n": 3
+        },
+        "hitches": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 3
+        },
+        "over33": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 3
+        },
+        "upKB": {
+          "median": 34.83427734375,
+          "min": 34.83427734375,
+          "max": 34.83427734375,
+          "n": 3
+        },
+        "downKB": {
+          "median": 0.0296875,
+          "min": 0.0296875,
+          "max": 0.0296875,
+          "n": 3
+        },
+        "gpuMs": {
+          "median": 3.8957999999999995,
+          "min": 3.87976,
+          "max": 3.8971999999999998,
+          "n": 3
+        },
+        "pass_mask": {
+          "median": 0.0493,
+          "min": 0.04862,
+          "max": 0.0499,
+          "n": 3
+        },
+        "pass_merge": {
+          "median": 3.8411,
+          "min": 3.8265000000000002,
+          "max": 3.84238,
+          "n": 3
+        },
+        "pass_finalize": {
+          "median": 0.00438,
+          "min": 0.00432,
+          "max": 0.0044,
+          "n": 3
+        }
+      }
+    },
+    {
+      "gridSize": 2,
+      "chunks": 4,
+      "mode": "cpu",
+      "repeats": 3,
+      "unreliable": 0,
+      "metrics": {
+        "initialMs": {
+          "median": 490.8000000002794,
+          "min": 489.45499999960884,
+          "max": 587.355000000447,
+          "n": 3
+        },
+        "editMs": {
+          "median": 121.42500000004657,
+          "min": 120.74249999993481,
+          "max": 122.21249999990687,
+          "n": 3
+        },
+        "latencyMs": {
+          "median": 124.46749999979511,
+          "min": 124.02999999979511,
+          "max": 125.36000000010245,
+          "n": 3
+        },
+        "frameP99": {
+          "median": 400.83430000002505,
+          "min": 369.8353999999899,
+          "max": 416.3333499999625,
+          "n": 3
+        },
+        "frameMax": {
+          "median": 500,
+          "min": 499.99499999999534,
+          "max": 500,
+          "n": 3
+        },
+        "hitches": {
+          "median": 39,
+          "min": 38,
+          "max": 39,
+          "n": 3
+        },
+        "over33": {
+          "median": 39,
+          "min": 39,
+          "max": 39,
+          "n": 3
+        },
+        "upKB": {
+          "median": 9417.9755859375,
+          "min": 9417.9755859375,
+          "max": 9417.9755859375,
+          "n": 3
+        },
+        "downKB": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 3
+        },
+        "gpuMs": null,
+        "pass_mask": null,
+        "pass_merge": null,
+        "pass_finalize": null
+      }
+    },
+    {
+      "gridSize": 2,
+      "chunks": 4,
+      "mode": "gpu-readback",
+      "repeats": 3,
+      "unreliable": 0,
+      "metrics": {
+        "initialMs": {
+          "median": 59.71499999985099,
+          "min": 58.019999999552965,
+          "max": 59.81999999983236,
+          "n": 3
+        },
+        "editMs": {
+          "median": 13.820000000065193,
+          "min": 13.68999999994412,
+          "max": 14.06249999976717,
+          "n": 3
+        },
+        "latencyMs": {
+          "median": 13.897499999962747,
+          "min": 13.757500000065193,
+          "max": 14.130000000121072,
+          "n": 3
+        },
+        "frameP99": {
+          "median": 16.67000000004191,
+          "min": 16.67000000004191,
+          "max": 16.67000000004191,
+          "n": 3
+        },
+        "frameMax": {
+          "median": 16.675000000046566,
+          "min": 16.675000000046566,
+          "max": 16.675000000046566,
+          "n": 3
+        },
+        "hitches": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 3
+        },
+        "over33": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 3
+        },
+        "upKB": {
+          "median": 7604.735546875,
+          "min": 7604.735546875,
+          "max": 7604.735546875,
+          "n": 3
+        },
+        "downKB": {
+          "median": 7534.38046875,
+          "min": 7534.38046875,
+          "max": 7534.38046875,
+          "n": 3
+        },
+        "gpuMs": {
+          "median": 4.12764,
+          "min": 4.118,
+          "max": 4.193379999999999,
+          "n": 3
+        },
+        "pass_mask": {
+          "median": 0.0562,
+          "min": 0.05548,
+          "max": 0.056900000000000006,
+          "n": 3
+        },
+        "pass_merge": {
+          "median": 4.06842,
+          "min": 4.0606,
+          "max": 4.135,
+          "n": 3
+        },
+        "pass_finalize": {
+          "median": 0.004580000000000001,
+          "min": 0.00452,
+          "max": 0.0047,
+          "n": 3
+        }
+      }
+    },
+    {
+      "gridSize": 2,
+      "chunks": 4,
+      "mode": "gpu-direct",
+      "repeats": 3,
+      "unreliable": 0,
+      "metrics": {
+        "initialMs": {
+          "median": 17.28999999957159,
+          "min": 16.520000000018626,
+          "max": 26.074999999720603,
+          "n": 3
+        },
+        "editMs": {
+          "median": 5.712499999906868,
+          "min": 5.3274999998975545,
+          "max": 5.755000000121072,
+          "n": 3
+        },
+        "latencyMs": {
+          "median": 7.8899999998975545,
+          "min": 7.1875,
+          "max": 8.092499999795109,
+          "n": 3
+        },
+        "frameP99": {
+          "median": 16.673500000004424,
+          "min": 16.67000000004191,
+          "max": 16.67499999998836,
+          "n": 3
+        },
+        "frameMax": {
+          "median": 16.675000000046566,
+          "min": 16.675000000046566,
+          "max": 16.675000000046566,
+          "n": 3
+        },
+        "hitches": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 3
+        },
+        "over33": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 3
+        },
+        "upKB": {
+          "median": 70.355078125,
+          "min": 70.355078125,
+          "max": 70.355078125,
+          "n": 3
+        },
+        "downKB": {
+          "median": 0.05546875,
+          "min": 0.05546875,
+          "max": 0.05546875,
+          "n": 3
+        },
+        "gpuMs": {
+          "median": 4.14226,
+          "min": 4.11158,
+          "max": 4.16186,
+          "n": 3
+        },
+        "pass_mask": {
+          "median": 0.05628,
+          "min": 0.05616,
+          "max": 0.056999999999999995,
+          "n": 3
+        },
+        "pass_merge": {
+          "median": 4.08276,
+          "min": 4.053319999999999,
+          "max": 4.10098,
+          "n": 3
+        },
+        "pass_finalize": {
+          "median": 0.00498,
+          "min": 0.00462,
+          "max": 0.00516,
+          "n": 3
+        }
+      }
+    },
+    {
+      "gridSize": 3,
+      "chunks": 9,
+      "mode": "cpu",
+      "repeats": 3,
+      "unreliable": 0,
+      "metrics": {
+        "initialMs": {
+          "median": 1064.5100000002421,
+          "min": 1060.345000000205,
+          "max": 1099.8799999994226,
+          "n": 3
+        },
+        "editMs": {
+          "median": 222.9499999997206,
+          "min": 220.89500000025146,
+          "max": 223.59499999997206,
+          "n": 3
+        },
+        "latencyMs": {
+          "median": 236.66499999980442,
+          "min": 235.79500000015832,
+          "max": 237.4899999999907,
+          "n": 3
+        },
+        "frameP99": {
+          "median": 430.99499999999557,
+          "min": 399.3226000000235,
+          "max": 431.6684999999866,
+          "n": 3
+        },
+        "frameMax": {
+          "median": 500,
+          "min": 499.9799999999814,
+          "max": 500.00500000000466,
+          "n": 3
+        },
+        "hitches": {
+          "median": 40,
+          "min": 38,
+          "max": 40,
+          "n": 3
+        },
+        "over33": {
+          "median": 40,
+          "min": 40,
+          "max": 40,
+          "n": 3
+        },
+        "upKB": {
+          "median": 9967.41796875,
+          "min": 9967.41796875,
+          "max": 9967.41796875,
+          "n": 3
+        },
+        "downKB": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 3
+        },
+        "gpuMs": null,
+        "pass_mask": null,
+        "pass_merge": null,
+        "pass_finalize": null
+      }
+    },
+    {
+      "gridSize": 3,
+      "chunks": 9,
+      "mode": "gpu-readback",
+      "repeats": 3,
+      "unreliable": 0,
+      "metrics": {
+        "initialMs": {
+          "median": 126.67499999981374,
+          "min": 121.63999999966472,
+          "max": 127.28999999957159,
+          "n": 3
+        },
+        "editMs": {
+          "median": 27.212499999906868,
+          "min": 27.1624999998603,
+          "max": 27.27999999979511,
+          "n": 3
+        },
+        "latencyMs": {
+          "median": 43.735000000102445,
+          "min": 39.68250000011176,
+          "max": 50.139999999897555,
+          "n": 3
+        },
+        "frameP99": {
+          "median": 16.67000000004191,
+          "min": 16.67000000004191,
+          "max": 16.673449999964795,
+          "n": 3
+        },
+        "frameMax": {
+          "median": 16.675000000046566,
+          "min": 16.67499999998836,
+          "max": 33.33499999996275,
+          "n": 3
+        },
+        "hitches": {
+          "median": 0,
+          "min": 0,
+          "max": 1,
+          "n": 3
+        },
+        "over33": {
+          "median": 0,
+          "min": 0,
+          "max": 1,
+          "n": 3
+        },
+        "upKB": {
+          "median": 8044.4658203125,
+          "min": 8044.4658203125,
+          "max": 8044.4658203125,
+          "n": 3
+        },
+        "downKB": {
+          "median": 7973.934375,
+          "min": 7973.934375,
+          "max": 7973.934375,
+          "n": 3
+        },
+        "gpuMs": {
+          "median": 7.2865,
+          "min": 7.251860000000001,
+          "max": 7.331160000000001,
+          "n": 3
+        },
+        "pass_mask": {
+          "median": 0.10511999999999999,
+          "min": 0.10508,
+          "max": 0.10594,
+          "n": 3
+        },
+        "pass_merge": {
+          "median": 7.17178,
+          "min": 7.13406,
+          "max": 7.219379999999999,
+          "n": 3
+        },
+        "pass_finalize": {
+          "median": 0.00852,
+          "min": 0.00818,
+          "max": 0.008539999999999999,
+          "n": 3
+        }
+      }
+    },
+    {
+      "gridSize": 3,
+      "chunks": 9,
+      "mode": "gpu-direct",
+      "repeats": 3,
+      "unreliable": 0,
+      "metrics": {
+        "initialMs": {
+          "median": 36.519999999552965,
+          "min": 33.77000000001863,
+          "max": 60.954999999608845,
+          "n": 3
+        },
+        "editMs": {
+          "median": 9.990000000223517,
+          "min": 9.93500000005588,
+          "max": 9.99750000005588,
+          "n": 3
+        },
+        "latencyMs": {
+          "median": 17.537500000093132,
+          "min": 14.75000000023283,
+          "max": 21.53000000002794,
+          "n": 3
+        },
+        "frameP99": {
+          "median": 16.67000000004191,
+          "min": 16.67000000004191,
+          "max": 16.67000000004191,
+          "n": 3
+        },
+        "frameMax": {
+          "median": 16.675000000046566,
+          "min": 16.67000000004191,
+          "max": 16.675000000046566,
+          "n": 3
+        },
+        "hitches": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 3
+        },
+        "over33": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 3
+        },
+        "upKB": {
+          "median": 70.5314453125,
+          "min": 70.5314453125,
+          "max": 70.5314453125,
+          "n": 3
+        },
+        "downKB": {
+          "median": 0.05625,
+          "min": 0.05625,
+          "max": 0.05625,
+          "n": 3
+        },
+        "gpuMs": {
+          "median": 7.24774,
+          "min": 7.0914,
+          "max": 7.2724,
+          "n": 3
+        },
+        "pass_mask": {
+          "median": 0.10425999999999999,
+          "min": 0.10336000000000001,
+          "max": 0.10502,
+          "n": 3
+        },
+        "pass_merge": {
+          "median": 7.13464,
+          "min": 6.97868,
+          "max": 7.1592,
+          "n": 3
+        },
+        "pass_finalize": {
+          "median": 0.00844,
+          "min": 0.008320000000000001,
+          "max": 0.00904,
+          "n": 3
+        }
+      }
+    }
+  ],
+  "runs": [
+    {
+      "gridSize": 1,
+      "mode": "cpu",
+      "repeat": 1,
+      "initial": {
+        "chunks": 1,
+        "quadCount": 50112,
+        "naiveFaces": 116820,
+        "totalMs": 153.875,
+        "submitMs": null,
+        "gpuMs": null,
+        "passMs": null,
+        "readbackMs": 0,
+        "bytesUp": 6013440,
+        "bytesDown": 0,
+        "overflowed": false,
+        "grew": 0,
+        "perChunkMs": [
+          153.875
+        ]
+      },
+      "edit": {
+        "mode": "cpu",
+        "gridSize": 1,
+        "chunks": 1,
+        "edits": 40,
+        "intervalMs": 250,
+        "radius": 24,
+        "seed": 1337,
+        "voxelsRemoved": 344515,
+        "frames": {
+          "frames": 458,
+          "totalMs": 10600.01000000001,
+          "avg": 23.144126637554606,
+          "median": 16.66500000000815,
+          "p95": 85.833999999992,
+          "p99": 100,
+          "max": 116.66499999997905,
+          "hitches": 38,
+          "over33": 38,
+          "wallMs": 10597.92500000028,
+          "coverage": 1.0001967366253044
+        },
+        "editMs": {
+          "median": 103.18999999994412,
+          "mean": 98.79912500000792,
+          "p95": 115.80849999983329,
+          "max": 117.23499999986961
+        },
+        "latencyMs": {
+          "median": 105.50499999988824,
+          "max": 120.31000000005588
+        },
+        "chunksPerEdit": 0.95,
+        "gpuMs": null,
+        "passMs": null,
+        "bytesUpPerEdit": 4037934,
+        "bytesDownPerEdit": 0
+      }
+    },
+    {
+      "gridSize": 1,
+      "mode": "cpu",
+      "repeat": 2,
+      "initial": {
+        "chunks": 1,
+        "quadCount": 50112,
+        "naiveFaces": 116820,
+        "totalMs": 120.43500000005588,
+        "submitMs": null,
+        "gpuMs": null,
+        "passMs": null,
+        "readbackMs": 0,
+        "bytesUp": 6013440,
+        "bytesDown": 0,
+        "overflowed": false,
+        "grew": 0,
+        "perChunkMs": [
+          120.43500000005588
+        ]
+      },
+      "edit": {
+        "mode": "cpu",
+        "gridSize": 1,
+        "chunks": 1,
+        "edits": 40,
+        "intervalMs": 250,
+        "radius": 24,
+        "seed": 1337,
+        "voxelsRemoved": 344515,
+        "frames": {
+          "frames": 452,
+          "totalMs": 10600.014999999985,
+          "avg": 23.451360619468993,
+          "median": 16.665000000037253,
+          "p95": 99.99499999999534,
+          "p99": 100,
+          "max": 116.66500000000815,
+          "hitches": 40,
+          "over33": 41,
+          "wallMs": 10597.799999999814,
+          "coverage": 1.0002090056426967
+        },
+        "editMs": {
+          "median": 102.96749999979511,
+          "mean": 98.9463749999879,
+          "p95": 114.09924999985378,
+          "max": 116.91000000014901
+        },
+        "latencyMs": {
+          "median": 105.22249999991618,
+          "max": 120.28499999968335
+        },
+        "chunksPerEdit": 0.95,
+        "gpuMs": null,
+        "passMs": null,
+        "bytesUpPerEdit": 4037934,
+        "bytesDownPerEdit": 0
+      }
+    },
+    {
+      "gridSize": 1,
+      "mode": "cpu",
+      "repeat": 3,
+      "initial": {
+        "chunks": 1,
+        "quadCount": 50112,
+        "naiveFaces": 116820,
+        "totalMs": 120.63999999966472,
+        "submitMs": null,
+        "gpuMs": null,
+        "passMs": null,
+        "readbackMs": 0,
+        "bytesUp": 6013440,
+        "bytesDown": 0,
+        "overflowed": false,
+        "grew": 0,
+        "perChunkMs": [
+          120.63999999966472
+        ]
+      },
+      "edit": {
+        "mode": "cpu",
+        "gridSize": 1,
+        "chunks": 1,
+        "edits": 40,
+        "intervalMs": 250,
+        "radius": 24,
+        "seed": 1337,
+        "voxelsRemoved": 344515,
+        "frames": {
+          "frames": 472,
+          "totalMs": 10600.020000000019,
+          "avg": 22.457669491525465,
+          "median": 16.665000000037253,
+          "p95": 83.32999999998428,
+          "p99": 99.99499999999534,
+          "max": 100,
+          "hitches": 39,
+          "over33": 39,
+          "wallMs": 10598.614999999758,
+          "coverage": 1.0001325644907624
+        },
+        "editMs": {
+          "median": 103.19249999988824,
+          "mean": 98.98724999999395,
+          "p95": 114.11875000006985,
+          "max": 116.52999999979511
+        },
+        "latencyMs": {
+          "median": 105.4749999998603,
+          "max": 119.875
+        },
+        "chunksPerEdit": 0.95,
+        "gpuMs": null,
+        "passMs": null,
+        "bytesUpPerEdit": 4037934,
+        "bytesDownPerEdit": 0
+      }
+    },
+    {
+      "gridSize": 1,
+      "mode": "gpu-readback",
+      "repeat": 1,
+      "initial": {
+        "chunks": 1,
+        "quadCount": 50112,
+        "naiveFaces": null,
+        "totalMs": 19.795000000391155,
+        "submitMs": 0.44499999983236194,
+        "gpuMs": 4.529,
+        "passMs": {
+          "mask": 0.10116,
+          "merge": 4.4232,
+          "finalize": 0.00464
+        },
+        "readbackMs": 11.125,
+        "bytesUp": 4921344,
+        "bytesDown": 4810752,
+        "overflowed": false,
+        "grew": 0,
+        "perChunkMs": [
+          19.795000000391155
+        ]
+      },
+      "edit": {
+        "mode": "gpu-readback",
+        "gridSize": 1,
+        "chunks": 1,
+        "edits": 40,
+        "intervalMs": 250,
+        "radius": 24,
+        "seed": 1337,
+        "voxelsRemoved": 344515,
+        "frames": {
+          "frames": 631,
+          "totalMs": 10516.690000000002,
+          "avg": 16.666703645007928,
+          "median": 16.665000000037253,
+          "p95": 16.67000000004191,
+          "p99": 16.67000000004191,
+          "max": 16.67499999998836,
+          "hitches": 0,
+          "over33": 0,
+          "wallMs": 10509.149999999907,
+          "coverage": 1.0007174700142347
+        },
+        "editMs": {
+          "median": 11.495000000111759,
+          "mean": 11.062374999991153,
+          "p95": 13.825750000053084,
+          "max": 14.565000000409782
+        },
+        "latencyMs": {
+          "median": 11.590000000083819,
+          "max": 14.669999999925494
+        },
+        "chunksPerEdit": 0.95,
+        "gpuMs": 3.8914,
+        "passMs": {
+          "mask": 0.05,
+          "merge": 3.8376799999999998,
+          "finalize": 0.00436
+        },
+        "bytesUpPerEdit": 3266017.5,
+        "bytesDownPerEdit": 3230347.2
+      }
+    },
+    {
+      "gridSize": 1,
+      "mode": "gpu-readback",
+      "repeat": 2,
+      "initial": {
+        "chunks": 1,
+        "quadCount": 50112,
+        "naiveFaces": null,
+        "totalMs": 16.08999999985099,
+        "submitMs": 0.17500000027939677,
+        "gpuMs": 4.28204,
+        "passMs": {
+          "mask": 0.06188,
+          "merge": 4.21424,
+          "finalize": 0.00592
+        },
+        "readbackMs": 10.140000000130385,
+        "bytesUp": 4921344,
+        "bytesDown": 4810752,
+        "overflowed": false,
+        "grew": 0,
+        "perChunkMs": [
+          16.08999999985099
+        ]
+      },
+      "edit": {
+        "mode": "gpu-readback",
+        "gridSize": 1,
+        "chunks": 1,
+        "edits": 40,
+        "intervalMs": 250,
+        "radius": 24,
+        "seed": 1337,
+        "voxelsRemoved": 344515,
+        "frames": {
+          "frames": 631,
+          "totalMs": 10516.690000000002,
+          "avg": 16.666703645007928,
+          "median": 16.665000000037253,
+          "p95": 16.67000000004191,
+          "p99": 16.67000000004191,
+          "max": 16.675000000046566,
+          "hitches": 0,
+          "over33": 0,
+          "wallMs": 10508.75,
+          "coverage": 1.0007555608421557
+        },
+        "editMs": {
+          "median": 12.46750000002794,
+          "mean": 11.638375000015367,
+          "p95": 13.50925000035204,
+          "max": 13.790000000037253
+        },
+        "latencyMs": {
+          "median": 12.550000000279397,
+          "max": 13.859999999869615
+        },
+        "chunksPerEdit": 0.95,
+        "gpuMs": 3.9229600000000002,
+        "passMs": {
+          "mask": 0.04954,
+          "merge": 3.86502,
+          "finalize": 0.00432
+        },
+        "bytesUpPerEdit": 3266017.5,
+        "bytesDownPerEdit": 3230347.2
+      }
+    },
+    {
+      "gridSize": 1,
+      "mode": "gpu-readback",
+      "repeat": 3,
+      "initial": {
+        "chunks": 1,
+        "quadCount": 50112,
+        "naiveFaces": null,
+        "totalMs": 16.699999999720603,
+        "submitMs": 0.14999999990686774,
+        "gpuMs": 3.9904399999999995,
+        "passMs": {
+          "mask": 0.06248,
+          "merge": 3.92208,
+          "finalize": 0.00588
+        },
+        "readbackMs": 9.915000000037253,
+        "bytesUp": 4921344,
+        "bytesDown": 4810752,
+        "overflowed": false,
+        "grew": 0,
+        "perChunkMs": [
+          16.699999999720603
+        ]
+      },
+      "edit": {
+        "mode": "gpu-readback",
+        "gridSize": 1,
+        "chunks": 1,
+        "edits": 40,
+        "intervalMs": 250,
+        "radius": 24,
+        "seed": 1337,
+        "voxelsRemoved": 344515,
+        "frames": {
+          "frames": 631,
+          "totalMs": 10516.700000000012,
+          "avg": 16.66671949286848,
+          "median": 16.665000000037253,
+          "p95": 16.67000000004191,
+          "p99": 16.673500000004424,
+          "max": 16.675000000046566,
+          "hitches": 0,
+          "over33": 0,
+          "wallMs": 10510.165000000037,
+          "coverage": 1.0006217790110787
+        },
+        "editMs": {
+          "median": 11.609999999869615,
+          "mean": 11.054249999963213,
+          "p95": 12.941249999939464,
+          "max": 13.43500000005588
+        },
+        "latencyMs": {
+          "median": 11.695000000065193,
+          "max": 13.514999999664724
+        },
+        "chunksPerEdit": 0.95,
+        "gpuMs": 3.9123400000000004,
+        "passMs": {
+          "mask": 0.049699999999999994,
+          "merge": 3.85832,
+          "finalize": 0.00432
+        },
+        "bytesUpPerEdit": 3266017.5,
+        "bytesDownPerEdit": 3230347.2
+      }
+    },
+    {
+      "gridSize": 1,
+      "mode": "gpu-direct",
+      "repeat": 1,
+      "initial": {
+        "chunks": 1,
+        "quadCount": 50112,
+        "naiveFaces": null,
+        "totalMs": 8.020000000018626,
+        "submitMs": 0.22000000020489097,
+        "gpuMs": 3.8148400000000002,
+        "passMs": {
+          "mask": 0.09716,
+          "merge": 3.712,
+          "finalize": 0.00568
+        },
+        "readbackMs": 0,
+        "bytesUp": 110592,
+        "bytesDown": 32,
+        "overflowed": false,
+        "grew": 0,
+        "perChunkMs": [
+          8.020000000018626
+        ]
+      },
+      "edit": {
+        "mode": "gpu-direct",
+        "gridSize": 1,
+        "chunks": 1,
+        "edits": 40,
+        "intervalMs": 250,
+        "radius": 24,
+        "seed": 1337,
+        "voxelsRemoved": 344515,
+        "frames": {
+          "frames": 630,
+          "totalMs": 10500.039999999979,
+          "avg": 16.666730158730125,
+          "median": 16.665000000037253,
+          "p95": 16.67000000004191,
+          "p99": 16.67000000004191,
+          "max": 16.67499999998836,
+          "hitches": 0,
+          "over33": 0,
+          "wallMs": 10504.17500000028,
+          "coverage": 0.9996063470000928
+        },
+        "editMs": {
+          "median": 4.937500000232831,
+          "mean": 4.70587499999674,
+          "p95": 5.495250000106171,
+          "max": 5.6049999999813735
+        },
+        "latencyMs": {
+          "median": 7.28000000002794,
+          "max": 8.055000000167638
+        },
+        "chunksPerEdit": 0.95,
+        "gpuMs": 3.87976,
+        "passMs": {
+          "mask": 0.0493,
+          "merge": 3.8265000000000002,
+          "finalize": 0.0044
+        },
+        "bytesUpPerEdit": 35670.3,
+        "bytesDownPerEdit": 30.4
+      }
+    },
+    {
+      "gridSize": 1,
+      "mode": "gpu-direct",
+      "repeat": 2,
+      "initial": {
+        "chunks": 1,
+        "quadCount": 50112,
+        "naiveFaces": null,
+        "totalMs": 6.165000000037253,
+        "submitMs": 0.13500000024214387,
+        "gpuMs": 4.06332,
+        "passMs": {
+          "mask": 0.09384,
+          "merge": 3.96376,
+          "finalize": 0.00572
+        },
+        "readbackMs": 0,
+        "bytesUp": 110592,
+        "bytesDown": 32,
+        "overflowed": false,
+        "grew": 0,
+        "perChunkMs": [
+          6.165000000037253
+        ]
+      },
+      "edit": {
+        "mode": "gpu-direct",
+        "gridSize": 1,
+        "chunks": 1,
+        "edits": 40,
+        "intervalMs": 250,
+        "radius": 24,
+        "seed": 1337,
+        "voxelsRemoved": 344515,
+        "frames": {
+          "frames": 630,
+          "totalMs": 10500.044999999984,
+          "avg": 16.66673809523807,
+          "median": 16.665000000037253,
+          "p95": 16.67000000004191,
+          "p99": 16.67000000004191,
+          "max": 16.67499999998836,
+          "hitches": 0,
+          "over33": 0,
+          "wallMs": 10505.495000000112,
+          "coverage": 0.9994812238737796
+        },
+        "editMs": {
+          "median": 4.669999999925494,
+          "mean": 4.391375000006519,
+          "p95": 4.781000000238419,
+          "max": 4.8299999996088445
+        },
+        "latencyMs": {
+          "median": 7.002499999944121,
+          "max": 7.190000000409782
+        },
+        "chunksPerEdit": 0.95,
+        "gpuMs": 3.8971999999999998,
+        "passMs": {
+          "mask": 0.04862,
+          "merge": 3.8411,
+          "finalize": 0.00432
+        },
+        "bytesUpPerEdit": 35670.3,
+        "bytesDownPerEdit": 30.4
+      }
+    },
+    {
+      "gridSize": 1,
+      "mode": "gpu-direct",
+      "repeat": 3,
+      "initial": {
+        "chunks": 1,
+        "quadCount": 50112,
+        "naiveFaces": null,
+        "totalMs": 5.365000000223517,
+        "submitMs": 0.22500000009313226,
+        "gpuMs": 4.0396,
+        "passMs": {
+          "mask": 0.09472,
+          "merge": 3.93912,
+          "finalize": 0.00576
+        },
+        "readbackMs": 0,
+        "bytesUp": 110592,
+        "bytesDown": 32,
+        "overflowed": false,
+        "grew": 0,
+        "perChunkMs": [
+          5.365000000223517
+        ]
+      },
+      "edit": {
+        "mode": "gpu-direct",
+        "gridSize": 1,
+        "chunks": 1,
+        "edits": 40,
+        "intervalMs": 250,
+        "radius": 24,
+        "seed": 1337,
+        "voxelsRemoved": 344515,
+        "frames": {
+          "frames": 631,
+          "totalMs": 10516.719999999972,
+          "avg": 16.666751188589497,
+          "median": 16.665000000037253,
+          "p95": 16.67000000004191,
+          "p99": 16.67000000004191,
+          "max": 16.675000000046566,
+          "hitches": 0,
+          "over33": 0,
+          "wallMs": 10504.46999999974,
+          "coverage": 1.0011661702113703
+        },
+        "editMs": {
+          "median": 6.2700000000186265,
+          "mean": 5.401500000047963,
+          "p95": 6.459999999962747,
+          "max": 6.535000000149012
+        },
+        "latencyMs": {
+          "median": 6.535000000149012,
+          "max": 8.945000000298023
+        },
+        "chunksPerEdit": 0.95,
+        "gpuMs": 3.8957999999999995,
+        "passMs": {
+          "mask": 0.0499,
+          "merge": 3.84238,
+          "finalize": 0.00438
+        },
+        "bytesUpPerEdit": 35670.3,
+        "bytesDownPerEdit": 30.4
+      }
+    },
+    {
+      "gridSize": 2,
+      "mode": "cpu",
+      "repeat": 1,
+      "initial": {
+        "chunks": 4,
+        "quadCount": 204826,
+        "naiveFaces": 405016,
+        "totalMs": 587.355000000447,
+        "submitMs": null,
+        "gpuMs": null,
+        "passMs": null,
+        "readbackMs": 0,
+        "bytesUp": 24579120,
+        "bytesDown": 0,
+        "overflowed": false,
+        "grew": 0,
+        "perChunkMs": [
+          150.95999999996275,
+          162.41500000003725,
+          133.82500000018626,
+          140.15500000026077
+        ]
+      },
+      "edit": {
+        "mode": "cpu",
+        "gridSize": 2,
+        "chunks": 4,
+        "edits": 40,
+        "intervalMs": 250,
+        "radius": 24,
+        "seed": 1337,
+        "voxelsRemoved": 713997,
+        "frames": {
+          "frames": 168,
+          "totalMs": 10733.38500000001,
+          "avg": 63.88919642857148,
+          "median": 16.669999999983702,
+          "p95": 260.8389999999724,
+          "p99": 416.3333499999625,
+          "max": 499.99499999999534,
+          "hitches": 39,
+          "over33": 39,
+          "wallMs": 10729.285000000149,
+          "coverage": 1.0003821317077382
+        },
+        "editMs": {
+          "median": 122.21249999990687,
+          "mean": 206.12662500003353,
+          "p95": 484.1962500002002,
+          "max": 496.7950000008568
+        },
+        "latencyMs": {
+          "median": 125.36000000010245,
+          "max": 529.4449999998324
+        },
+        "chunksPerEdit": 1.775,
+        "gpuMs": null,
+        "passMs": null,
+        "bytesUpPerEdit": 9644007,
+        "bytesDownPerEdit": 0
+      }
+    },
+    {
+      "gridSize": 2,
+      "mode": "cpu",
+      "repeat": 2,
+      "initial": {
+        "chunks": 4,
+        "quadCount": 204826,
+        "naiveFaces": 405016,
+        "totalMs": 489.45499999960884,
+        "submitMs": null,
+        "gpuMs": null,
+        "passMs": null,
+        "readbackMs": 0,
+        "bytesUp": 24579120,
+        "bytesDown": 0,
+        "overflowed": false,
+        "grew": 0,
+        "perChunkMs": [
+          121,
+          121.31499999994412,
+          127.5449999999255,
+          119.59499999973923
+        ]
+      },
+      "edit": {
+        "mode": "cpu",
+        "gridSize": 2,
+        "chunks": 4,
+        "edits": 40,
+        "intervalMs": 250,
+        "radius": 24,
+        "seed": 1337,
+        "voxelsRemoved": 713997,
+        "frames": {
+          "frames": 180,
+          "totalMs": 10716.724999999977,
+          "avg": 59.53736111111098,
+          "median": 16.669999999983702,
+          "p95": 250.83775000000333,
+          "p99": 400.83430000002505,
+          "max": 500,
+          "hitches": 38,
+          "over33": 39,
+          "wallMs": 10727.580000000075,
+          "coverage": 0.9989881222046261
+        },
+        "editMs": {
+          "median": 121.42500000004657,
+          "mean": 205.172750000027,
+          "p95": 487.580000000447,
+          "max": 491.82500000018626
+        },
+        "latencyMs": {
+          "median": 124.46749999979511,
+          "max": 527.3600000003353
+        },
+        "chunksPerEdit": 1.775,
+        "gpuMs": null,
+        "passMs": null,
+        "bytesUpPerEdit": 9644007,
+        "bytesDownPerEdit": 0
+      }
+    },
+    {
+      "gridSize": 2,
+      "mode": "cpu",
+      "repeat": 3,
+      "initial": {
+        "chunks": 4,
+        "quadCount": 204826,
+        "naiveFaces": 405016,
+        "totalMs": 490.8000000002794,
+        "submitMs": null,
+        "gpuMs": null,
+        "passMs": null,
+        "readbackMs": 0,
+        "bytesUp": 24579120,
+        "bytesDown": 0,
+        "overflowed": false,
+        "grew": 0,
+        "perChunkMs": [
+          123.4250000002794,
+          120.25,
+          120.72999999998137,
+          126.39500000001863
+        ]
+      },
+      "edit": {
+        "mode": "cpu",
+        "gridSize": 2,
+        "chunks": 4,
+        "edits": 40,
+        "intervalMs": 250,
+        "radius": 24,
+        "seed": 1337,
+        "voxelsRemoved": 713997,
+        "frames": {
+          "frames": 182,
+          "totalMs": 10733.395000000019,
+          "avg": 58.9746978021979,
+          "median": 16.669999999983702,
+          "p95": 250.00475000000444,
+          "p99": 369.8353999999899,
+          "max": 500,
+          "hitches": 39,
+          "over33": 39,
+          "wallMs": 10727.685000000056,
+          "coverage": 1.00053226767937
+        },
+        "editMs": {
+          "median": 120.74249999993481,
+          "mean": 204.29212499994318,
+          "p95": 467.2387499994365,
+          "max": 493.3099999995902
+        },
+        "latencyMs": {
+          "median": 124.02999999979511,
+          "max": 525.8849999997765
+        },
+        "chunksPerEdit": 1.775,
+        "gpuMs": null,
+        "passMs": null,
+        "bytesUpPerEdit": 9644007,
+        "bytesDownPerEdit": 0
+      }
+    },
+    {
+      "gridSize": 2,
+      "mode": "gpu-readback",
+      "repeat": 1,
+      "initial": {
+        "chunks": 4,
+        "quadCount": 204826,
+        "naiveFaces": null,
+        "totalMs": 59.71499999985099,
+        "submitMs": 1.5550000006332994,
+        "gpuMs": 15.325160000000002,
+        "passMs": {
+          "mask": 0.25032,
+          "merge": 15.056840000000001,
+          "finalize": 0.018000000000000002
+        },
+        "readbackMs": 39.43999999947846,
+        "bytesUp": 20133312,
+        "bytesDown": 19663296,
+        "overflowed": false,
+        "grew": 0,
+        "perChunkMs": [
+          18.304999999701977,
+          13.290000000037253,
+          13.774999999906868,
+          14.345000000204891
+        ]
+      },
+      "edit": {
+        "mode": "gpu-readback",
+        "gridSize": 2,
+        "chunks": 4,
+        "edits": 40,
+        "intervalMs": 250,
+        "radius": 24,
+        "seed": 1337,
+        "voxelsRemoved": 713997,
+        "frames": {
+          "frames": 633,
+          "totalMs": 10550.065000000002,
+          "avg": 16.666769352290682,
+          "median": 16.665000000037253,
+          "p95": 16.67000000004191,
+          "p99": 16.67000000004191,
+          "max": 16.675000000046566,
+          "hitches": 0,
+          "over33": 0,
+          "wallMs": 10547.560000000056,
+          "coverage": 1.000237495686201
+        },
+        "editMs": {
+          "median": 13.820000000065193,
+          "mean": 24.972000000032132,
+          "p95": 57.63149999978486,
+          "max": 63.03000000026077
+        },
+        "latencyMs": {
+          "median": 13.897499999962747,
+          "max": 119.35000000009313
+        },
+        "chunksPerEdit": 1.775,
+        "gpuMs": 4.118,
+        "passMs": {
+          "mask": 0.0562,
+          "merge": 4.0606,
+          "finalize": 0.00452
+        },
+        "bytesUpPerEdit": 7787249.2,
+        "bytesDownPerEdit": 7715205.6
+      }
+    },
+    {
+      "gridSize": 2,
+      "mode": "gpu-readback",
+      "repeat": 2,
+      "initial": {
+        "chunks": 4,
+        "quadCount": 204826,
+        "naiveFaces": null,
+        "totalMs": 58.019999999552965,
+        "submitMs": 0.6800000001676381,
+        "gpuMs": 15.40608,
+        "passMs": {
+          "mask": 0.25567999999999996,
+          "merge": 15.13212,
+          "finalize": 0.018279999999999998
+        },
+        "readbackMs": 38.019999999552965,
+        "bytesUp": 20133312,
+        "bytesDown": 19663296,
+        "overflowed": false,
+        "grew": 0,
+        "perChunkMs": [
+          17.209999999962747,
+          12.640000000130385,
+          13.629999999888241,
+          14.539999999571592
+        ]
+      },
+      "edit": {
+        "mode": "gpu-readback",
+        "gridSize": 2,
+        "chunks": 4,
+        "edits": 40,
+        "intervalMs": 250,
+        "radius": 24,
+        "seed": 1337,
+        "voxelsRemoved": 713997,
+        "frames": {
+          "frames": 632,
+          "totalMs": 10533.405000000028,
+          "avg": 16.666780063291185,
+          "median": 16.665000000037253,
+          "p95": 16.67000000004191,
+          "p99": 16.67000000004191,
+          "max": 16.675000000046566,
+          "hitches": 0,
+          "over33": 0,
+          "wallMs": 10537.939999999944,
+          "coverage": 0.9995696502352531
+        },
+        "editMs": {
+          "median": 13.68999999994412,
+          "mean": 24.857375000009778,
+          "p95": 57.26325000021606,
+          "max": 63.05999999959022
+        },
+        "latencyMs": {
+          "median": 13.757500000065193,
+          "max": 106.68999999994412
+        },
+        "chunksPerEdit": 1.775,
+        "gpuMs": 4.12764,
+        "passMs": {
+          "mask": 0.05548,
+          "merge": 4.06842,
+          "finalize": 0.004580000000000001
+        },
+        "bytesUpPerEdit": 7787249.2,
+        "bytesDownPerEdit": 7715205.6
+      }
+    },
+    {
+      "gridSize": 2,
+      "mode": "gpu-readback",
+      "repeat": 3,
+      "initial": {
+        "chunks": 4,
+        "quadCount": 204826,
+        "naiveFaces": null,
+        "totalMs": 59.81999999983236,
+        "submitMs": 0.8049999992363155,
+        "gpuMs": 16.215999999999998,
+        "passMs": {
+          "mask": 0.2578,
+          "merge": 15.939439999999998,
+          "finalize": 0.01876
+        },
+        "readbackMs": 39.02499999990687,
+        "bytesUp": 20133312,
+        "bytesDown": 19663296,
+        "overflowed": false,
+        "grew": 0,
+        "perChunkMs": [
+          16.97000000020489,
+          13.979999999981374,
+          14.81499999994412,
+          14.054999999701977
+        ]
+      },
+      "edit": {
+        "mode": "gpu-readback",
+        "gridSize": 2,
+        "chunks": 4,
+        "edits": 40,
+        "intervalMs": 250,
+        "radius": 24,
+        "seed": 1337,
+        "voxelsRemoved": 713997,
+        "frames": {
+          "frames": 632,
+          "totalMs": 10533.410000000033,
+          "avg": 16.666787974683597,
+          "median": 16.665000000037253,
+          "p95": 16.67000000004191,
+          "p99": 16.67000000004191,
+          "max": 16.675000000046566,
+          "hitches": 0,
+          "over33": 0,
+          "wallMs": 10536.089999999851,
+          "coverage": 0.9997456361895335
+        },
+        "editMs": {
+          "median": 14.06249999976717,
+          "mean": 24.65174999998417,
+          "p95": 57.392250000010236,
+          "max": 60.68999999994412
+        },
+        "latencyMs": {
+          "median": 14.130000000121072,
+          "max": 106.34499999973923
+        },
+        "chunksPerEdit": 1.775,
+        "gpuMs": 4.193379999999999,
+        "passMs": {
+          "mask": 0.056900000000000006,
+          "merge": 4.135,
+          "finalize": 0.0047
+        },
+        "bytesUpPerEdit": 7787249.2,
+        "bytesDownPerEdit": 7715205.6
+      }
+    },
+    {
+      "gridSize": 2,
+      "mode": "gpu-direct",
+      "repeat": 1,
+      "initial": {
+        "chunks": 4,
+        "quadCount": 204826,
+        "naiveFaces": null,
+        "totalMs": 26.074999999720603,
+        "submitMs": 0.650000000372529,
+        "gpuMs": 13.33548,
+        "passMs": {
+          "mask": 0.23096000000000003,
+          "merge": 13.0894,
+          "finalize": 0.015120000000000001
+        },
+        "readbackMs": 0,
+        "bytesUp": 470016,
+        "bytesDown": 128,
+        "overflowed": false,
+        "grew": 0,
+        "perChunkMs": [
+          8.129999999888241,
+          6.2299999999813735,
+          5.899999999906868,
+          5.814999999944121
+        ]
+      },
+      "edit": {
+        "mode": "gpu-direct",
+        "gridSize": 2,
+        "chunks": 4,
+        "edits": 40,
+        "intervalMs": 250,
+        "radius": 24,
+        "seed": 1337,
+        "voxelsRemoved": 713997,
+        "frames": {
+          "frames": 632,
+          "totalMs": 10533.409999999974,
+          "avg": 16.666787974683505,
+          "median": 16.665000000037253,
+          "p95": 16.67000000004191,
+          "p99": 16.67000000004191,
+          "max": 16.675000000046566,
+          "hitches": 0,
+          "over33": 0,
+          "wallMs": 10526.44999999972,
+          "coverage": 1.0006611915698316
+        },
+        "editMs": {
+          "median": 5.712499999906868,
+          "mean": 9.408750000048894,
+          "p95": 21.235000000405122,
+          "max": 21.75000000046566
+        },
+        "latencyMs": {
+          "median": 7.8899999998975545,
+          "max": 60.484999999869615
+        },
+        "chunksPerEdit": 1.775,
+        "gpuMs": 4.11158,
+        "passMs": {
+          "mask": 0.05616,
+          "merge": 4.053319999999999,
+          "finalize": 0.00462
+        },
+        "bytesUpPerEdit": 72043.6,
+        "bytesDownPerEdit": 56.8
+      }
+    },
+    {
+      "gridSize": 2,
+      "mode": "gpu-direct",
+      "repeat": 2,
+      "initial": {
+        "chunks": 4,
+        "quadCount": 204826,
+        "naiveFaces": null,
+        "totalMs": 17.28999999957159,
+        "submitMs": 0.6349999997764826,
+        "gpuMs": 11.82656,
+        "passMs": {
+          "mask": 0.20112,
+          "merge": 11.610959999999999,
+          "finalize": 0.01448
+        },
+        "readbackMs": 0,
+        "bytesUp": 470016,
+        "bytesDown": 128,
+        "overflowed": false,
+        "grew": 0,
+        "perChunkMs": [
+          5.804999999701977,
+          4.259999999776483,
+          3.5700000002980232,
+          3.654999999795109
+        ]
+      },
+      "edit": {
+        "mode": "gpu-direct",
+        "gridSize": 2,
+        "chunks": 4,
+        "edits": 40,
+        "intervalMs": 250,
+        "radius": 24,
+        "seed": 1337,
+        "voxelsRemoved": 713997,
+        "frames": {
+          "frames": 631,
+          "totalMs": 10516.75,
+          "avg": 16.666798732171156,
+          "median": 16.665000000037253,
+          "p95": 16.67000000004191,
+          "p99": 16.673500000004424,
+          "max": 16.675000000046566,
+          "hitches": 0,
+          "over33": 0,
+          "wallMs": 10513.349999999627,
+          "coverage": 1.000323398345948
+        },
+        "editMs": {
+          "median": 5.3274999998975545,
+          "mean": 8.940374999970663,
+          "p95": 21.413750000135042,
+          "max": 21.680000000167638
+        },
+        "latencyMs": {
+          "median": 7.1875,
+          "max": 49.794999999925494
+        },
+        "chunksPerEdit": 1.775,
+        "gpuMs": 4.14226,
+        "passMs": {
+          "mask": 0.05628,
+          "merge": 4.08276,
+          "finalize": 0.00498
+        },
+        "bytesUpPerEdit": 72043.6,
+        "bytesDownPerEdit": 56.8
+      }
+    },
+    {
+      "gridSize": 2,
+      "mode": "gpu-direct",
+      "repeat": 3,
+      "initial": {
+        "chunks": 4,
+        "quadCount": 204826,
+        "naiveFaces": null,
+        "totalMs": 16.520000000018626,
+        "submitMs": 0.6500000008381903,
+        "gpuMs": 11.15904,
+        "passMs": {
+          "mask": 0.1954,
+          "merge": 10.94716,
+          "finalize": 0.01648
+        },
+        "readbackMs": 0,
+        "bytesUp": 470016,
+        "bytesDown": 128,
+        "overflowed": false,
+        "grew": 0,
+        "perChunkMs": [
+          5.279999999795109,
+          4.064999999944121,
+          3.610000000335276,
+          3.5649999999441206
+        ]
+      },
+      "edit": {
+        "mode": "gpu-direct",
+        "gridSize": 2,
+        "chunks": 4,
+        "edits": 40,
+        "intervalMs": 250,
+        "radius": 24,
+        "seed": 1337,
+        "voxelsRemoved": 713997,
+        "frames": {
+          "frames": 631,
+          "totalMs": 10516.755000000005,
+          "avg": 16.666806656101432,
+          "median": 16.665000000037253,
+          "p95": 16.67000000004191,
+          "p99": 16.67499999998836,
+          "max": 16.675000000046566,
+          "hitches": 0,
+          "over33": 0,
+          "wallMs": 10519.330000000075,
+          "coverage": 0.9997552125468
+        },
+        "editMs": {
+          "median": 5.755000000121072,
+          "mean": 8.992750000057276,
+          "p95": 20.69425000012852,
+          "max": 21.484999999403954
+        },
+        "latencyMs": {
+          "median": 8.092499999795109,
+          "max": 55.64500000001863
+        },
+        "chunksPerEdit": 1.775,
+        "gpuMs": 4.16186,
+        "passMs": {
+          "mask": 0.056999999999999995,
+          "merge": 4.10098,
+          "finalize": 0.00516
+        },
+        "bytesUpPerEdit": 72043.6,
+        "bytesDownPerEdit": 56.8
+      }
+    },
+    {
+      "gridSize": 3,
+      "mode": "cpu",
+      "repeat": 1,
+      "initial": {
+        "chunks": 9,
+        "quadCount": 446399,
+        "naiveFaces": 859492,
+        "totalMs": 1099.8799999994226,
+        "submitMs": null,
+        "gpuMs": null,
+        "passMs": null,
+        "readbackMs": 0,
+        "bytesUp": 53567880,
+        "bytesDown": 0,
+        "overflowed": false,
+        "grew": 0,
+        "perChunkMs": [
+          135.97999999998137,
+          130.72999999998137,
+          115.97999999998137,
+          118.90000000037253,
+          142.62999999988824,
+          114.89499999955297,
+          114.86499999975786,
+          114.12999999988824,
+          111.77000000001863
+        ]
+      },
+      "edit": {
+        "mode": "cpu",
+        "gridSize": 3,
+        "chunks": 9,
+        "edits": 40,
+        "intervalMs": 250,
+        "radius": 24,
+        "seed": 1337,
+        "voxelsRemoved": 916780,
+        "frames": {
+          "frames": 163,
+          "totalMs": 10816.765000000014,
+          "avg": 66.36052147239272,
+          "median": 16.669999999983702,
+          "p95": 250.0100000000035,
+          "p99": 431.6684999999866,
+          "max": 499.9799999999814,
+          "hitches": 38,
+          "over33": 40,
+          "wallMs": 10816.424999999814,
+          "coverage": 1.0000314336761176
+        },
+        "editMs": {
+          "median": 222.9499999997206,
+          "mean": 208.62712499994086,
+          "p95": 466.5460000001127,
+          "max": 479.3699999996461
+        },
+        "latencyMs": {
+          "median": 236.66499999980442,
+          "max": 510.38500000024214
+        },
+        "chunksPerEdit": 1.8,
+        "gpuMs": null,
+        "passMs": null,
+        "bytesUpPerEdit": 10206636,
+        "bytesDownPerEdit": 0
+      }
+    },
+    {
+      "gridSize": 3,
+      "mode": "cpu",
+      "repeat": 2,
+      "initial": {
+        "chunks": 9,
+        "quadCount": 446399,
+        "naiveFaces": 859492,
+        "totalMs": 1060.345000000205,
+        "submitMs": null,
+        "gpuMs": null,
+        "passMs": null,
+        "readbackMs": 0,
+        "bytesUp": 53567880,
+        "bytesDown": 0,
+        "overflowed": false,
+        "grew": 0,
+        "perChunkMs": [
+          122.3300000000745,
+          121,
+          115.21500000031665,
+          119.31499999994412,
+          129.42499999981374,
+          113.68000000016764,
+          114.62000000011176,
+          114.30499999970198,
+          110.4550000000745
+        ]
+      },
+      "edit": {
+        "mode": "cpu",
+        "gridSize": 3,
+        "chunks": 9,
+        "edits": 40,
+        "intervalMs": 250,
+        "radius": 24,
+        "seed": 1337,
+        "voxelsRemoved": 916780,
+        "frames": {
+          "frames": 173,
+          "totalMs": 10833.424999999988,
+          "avg": 62.620953757225365,
+          "median": 16.669999999983702,
+          "p95": 250.00200000000186,
+          "p99": 399.3226000000235,
+          "max": 500,
+          "hitches": 40,
+          "over33": 40,
+          "wallMs": 10818.334999999963,
+          "coverage": 1.0013948541989155
+        },
+        "editMs": {
+          "median": 220.89500000025146,
+          "mean": 206.0766250000801,
+          "p95": 460.4342499999329,
+          "max": 506.1299999994226
+        },
+        "latencyMs": {
+          "median": 235.79500000015832,
+          "max": 539.9049999997951
+        },
+        "chunksPerEdit": 1.8,
+        "gpuMs": null,
+        "passMs": null,
+        "bytesUpPerEdit": 10206636,
+        "bytesDownPerEdit": 0
+      }
+    },
+    {
+      "gridSize": 3,
+      "mode": "cpu",
+      "repeat": 3,
+      "initial": {
+        "chunks": 9,
+        "quadCount": 446399,
+        "naiveFaces": 859492,
+        "totalMs": 1064.5100000002421,
+        "submitMs": null,
+        "gpuMs": null,
+        "passMs": null,
+        "readbackMs": 0,
+        "bytesUp": 53567880,
+        "bytesDown": 0,
+        "overflowed": false,
+        "grew": 0,
+        "perChunkMs": [
+          122.23499999986961,
+          120.73500000033528,
+          115.71500000031665,
+          121.36499999975786,
+          127.23499999986961,
+          114.39500000001863,
+          114.91500000003725,
+          115.04000000003725,
+          112.875
+        ]
+      },
+      "edit": {
+        "mode": "cpu",
+        "gridSize": 3,
+        "chunks": 9,
+        "edits": 40,
+        "intervalMs": 250,
+        "radius": 24,
+        "seed": 1337,
+        "voxelsRemoved": 916780,
+        "frames": {
+          "frames": 170,
+          "totalMs": 10833.434999999998,
+          "avg": 63.72608823529411,
+          "median": 16.669999999983702,
+          "p95": 250.00500000000466,
+          "p99": 430.99499999999557,
+          "max": 500.00500000000466,
+          "hitches": 40,
+          "over33": 40,
+          "wallMs": 10838.05999999959,
+          "coverage": 0.9995732631117015
+        },
+        "editMs": {
+          "median": 223.59499999997206,
+          "mean": 208.6473749999539,
+          "p95": 462.01824999987144,
+          "max": 483.5249999994412
+        },
+        "latencyMs": {
+          "median": 237.4899999999907,
+          "max": 514.4849999998696
+        },
+        "chunksPerEdit": 1.8,
+        "gpuMs": null,
+        "passMs": null,
+        "bytesUpPerEdit": 10206636,
+        "bytesDownPerEdit": 0
+      }
+    },
+    {
+      "gridSize": 3,
+      "mode": "gpu-readback",
+      "repeat": 1,
+      "initial": {
+        "chunks": 9,
+        "quadCount": 446399,
+        "naiveFaces": null,
+        "totalMs": 126.67499999981374,
+        "submitMs": 2.3549999995157123,
+        "gpuMs": 36.3364,
+        "passMs": {
+          "mask": 0.54156,
+          "merge": 35.751039999999996,
+          "finalize": 0.0438
+        },
+        "readbackMs": 77.89999999990687,
+        "bytesUp": 43911840,
+        "bytesDown": 42854304,
+        "overflowed": false,
+        "grew": 0,
+        "perChunkMs": [
+          16.375,
+          14.049999999813735,
+          13.120000000111759,
+          13.445000000298023,
+          14.760000000242144,
+          13.704999999608845,
+          14.199999999720603,
+          14.100000000093132,
+          12.919999999925494
+        ]
+      },
+      "edit": {
+        "mode": "gpu-readback",
+        "gridSize": 3,
+        "chunks": 9,
+        "edits": 40,
+        "intervalMs": 250,
+        "radius": 24,
+        "seed": 1337,
+        "voxelsRemoved": 916780,
+        "frames": {
+          "frames": 633,
+          "totalMs": 10550.099999999977,
+          "avg": 16.666824644549727,
+          "median": 16.665000000037253,
+          "p95": 16.67000000004191,
+          "p99": 16.67000000004191,
+          "max": 16.67499999998836,
+          "hitches": 0,
+          "over33": 0,
+          "wallMs": 10549.995000000112,
+          "coverage": 1.000009952611339
+        },
+        "editMs": {
+          "median": 27.1624999998603,
+          "mean": 25.101124999998138,
+          "p95": 58.99275000037159,
+          "max": 61.60499999998137
+        },
+        "latencyMs": {
+          "median": 50.139999999897555,
+          "max": 120.375
+        },
+        "chunksPerEdit": 1.8,
+        "gpuMs": 7.331160000000001,
+        "passMs": {
+          "mask": 0.10508,
+          "merge": 7.219379999999999,
+          "finalize": 0.00818
+        },
+        "bytesUpPerEdit": 8237533,
+        "bytesDownPerEdit": 8165308.8
+      }
+    },
+    {
+      "gridSize": 3,
+      "mode": "gpu-readback",
+      "repeat": 2,
+      "initial": {
+        "chunks": 9,
+        "quadCount": 446399,
+        "naiveFaces": null,
+        "totalMs": 121.63999999966472,
+        "submitMs": 1.4549999996088445,
+        "gpuMs": 35.8422,
+        "passMs": {
+          "mask": 0.87444,
+          "merge": 34.9256,
+          "finalize": 0.04216
+        },
+        "readbackMs": 75.08999999985099,
+        "bytesUp": 43911840,
+        "bytesDown": 42854304,
+        "overflowed": false,
+        "grew": 0,
+        "perChunkMs": [
+          17.334999999962747,
+          13.234999999869615,
+          12.845000000204891,
+          12.384999999776483,
+          13.884999999776483,
+          13,
+          13.31000000005588,
+          14.285000000149012,
+          11.359999999869615
+        ]
+      },
+      "edit": {
+        "mode": "gpu-readback",
+        "gridSize": 3,
+        "chunks": 9,
+        "edits": 40,
+        "intervalMs": 250,
+        "radius": 24,
+        "seed": 1337,
+        "voxelsRemoved": 916780,
+        "frames": {
+          "frames": 633,
+          "totalMs": 10550.109999999986,
+          "avg": 16.66684044233805,
+          "median": 16.665000000037253,
+          "p95": 16.67000000004191,
+          "p99": 16.67000000004191,
+          "max": 16.675000000046566,
+          "hitches": 0,
+          "over33": 0,
+          "wallMs": 10543.570000000298,
+          "coverage": 1.0006202832626603
+        },
+        "editMs": {
+          "median": 27.27999999979511,
+          "mean": 25.154999999969732,
+          "p95": 57.111749999923624,
+          "max": 61.69499999983236
+        },
+        "latencyMs": {
+          "median": 43.735000000102445,
+          "max": 113.84499999973923
+        },
+        "chunksPerEdit": 1.8,
+        "gpuMs": 7.2865,
+        "passMs": {
+          "mask": 0.10511999999999999,
+          "merge": 7.17178,
+          "finalize": 0.008539999999999999
+        },
+        "bytesUpPerEdit": 8237533,
+        "bytesDownPerEdit": 8165308.8
+      }
+    },
+    {
+      "gridSize": 3,
+      "mode": "gpu-readback",
+      "repeat": 3,
+      "initial": {
+        "chunks": 9,
+        "quadCount": 446399,
+        "naiveFaces": null,
+        "totalMs": 127.28999999957159,
+        "submitMs": 1.4850000003352761,
+        "gpuMs": 36.50924,
+        "passMs": {
+          "mask": 0.5368400000000001,
+          "merge": 35.93,
+          "finalize": 0.0424
+        },
+        "readbackMs": 78.2050000000745,
+        "bytesUp": 43911840,
+        "bytesDown": 42854304,
+        "overflowed": false,
+        "grew": 0,
+        "perChunkMs": [
+          16.22000000020489,
+          14.65999999968335,
+          13.754999999888241,
+          14.634999999776483,
+          13.629999999888241,
+          13.274999999906868,
+          13.040000000037253,
+          13.740000000223517,
+          14.334999999962747
+        ]
+      },
+      "edit": {
+        "mode": "gpu-readback",
+        "gridSize": 3,
+        "chunks": 9,
+        "edits": 40,
+        "intervalMs": 250,
+        "radius": 24,
+        "seed": 1337,
+        "voxelsRemoved": 916780,
+        "frames": {
+          "frames": 632,
+          "totalMs": 10550.11499999999,
+          "avg": 16.693219936708847,
+          "median": 16.665000000037253,
+          "p95": 16.67000000004191,
+          "p99": 16.673449999964795,
+          "max": 33.33499999996275,
+          "hitches": 1,
+          "over33": 1,
+          "wallMs": 10539.054999999702,
+          "coverage": 1.0010494299536619
+        },
+        "editMs": {
+          "median": 27.212499999906868,
+          "mean": 25.366500000085217,
+          "p95": 59.11424999996088,
+          "max": 61.41000000014901
+        },
+        "latencyMs": {
+          "median": 39.68250000011176,
+          "max": 110.45000000018626
+        },
+        "chunksPerEdit": 1.8,
+        "gpuMs": 7.251860000000001,
+        "passMs": {
+          "mask": 0.10594,
+          "merge": 7.13406,
+          "finalize": 0.00852
+        },
+        "bytesUpPerEdit": 8237533,
+        "bytesDownPerEdit": 8165308.8
+      }
+    },
+    {
+      "gridSize": 3,
+      "mode": "gpu-direct",
+      "repeat": 1,
+      "initial": {
+        "chunks": 9,
+        "quadCount": 446399,
+        "naiveFaces": null,
+        "totalMs": 60.954999999608845,
+        "submitMs": 1.7999999993480742,
+        "gpuMs": 27.858800000000002,
+        "passMs": {
+          "mask": 0.4414,
+          "merge": 27.383120000000005,
+          "finalize": 0.034280000000000005
+        },
+        "readbackMs": 0,
+        "bytesUp": 1057536,
+        "bytesDown": 288,
+        "overflowed": false,
+        "grew": 0,
+        "perChunkMs": [
+          7.9249999998137355,
+          5.515000000130385,
+          5.790000000037253,
+          5.735000000335276,
+          5.665000000037253,
+          5.974999999627471,
+          5.654999999795109,
+          10.714999999850988,
+          7.9799999999813735
+        ]
+      },
+      "edit": {
+        "mode": "gpu-direct",
+        "gridSize": 3,
+        "chunks": 9,
+        "edits": 40,
+        "intervalMs": 250,
+        "radius": 24,
+        "seed": 1337,
+        "voxelsRemoved": 916780,
+        "frames": {
+          "frames": 631,
+          "totalMs": 10516.785000000033,
+          "avg": 16.666854199683094,
+          "median": 16.665000000037253,
+          "p95": 16.67000000004191,
+          "p99": 16.67000000004191,
+          "max": 16.675000000046566,
+          "hitches": 0,
+          "over33": 0,
+          "wallMs": 10515.209999999963,
+          "coverage": 1.000149783028591
+        },
+        "editMs": {
+          "median": 9.99750000005588,
+          "mean": 9.533874999999535,
+          "p95": 21.727500000363214,
+          "max": 22.56000000005588
+        },
+        "latencyMs": {
+          "median": 14.75000000023283,
+          "max": 49.885000000242144
+        },
+        "chunksPerEdit": 1.8,
+        "gpuMs": 7.2724,
+        "passMs": {
+          "mask": 0.10336000000000001,
+          "merge": 7.1592,
+          "finalize": 0.00844
+        },
+        "bytesUpPerEdit": 72224.2,
+        "bytesDownPerEdit": 57.6
+      }
+    },
+    {
+      "gridSize": 3,
+      "mode": "gpu-direct",
+      "repeat": 2,
+      "initial": {
+        "chunks": 9,
+        "quadCount": 446399,
+        "naiveFaces": null,
+        "totalMs": 36.519999999552965,
+        "submitMs": 1.4100000001490116,
+        "gpuMs": 24.17108,
+        "passMs": {
+          "mask": 0.36228,
+          "merge": 23.776320000000005,
+          "finalize": 0.03248
+        },
+        "readbackMs": 0,
+        "bytesUp": 1057536,
+        "bytesDown": 288,
+        "overflowed": false,
+        "grew": 0,
+        "perChunkMs": [
+          6.6450000000186265,
+          3.484999999869615,
+          3.599999999627471,
+          3.5750000001862645,
+          3.609999999869615,
+          4.884999999776483,
+          3.5749999997206032,
+          3.595000000204891,
+          3.5500000002793968
+        ]
+      },
+      "edit": {
+        "mode": "gpu-direct",
+        "gridSize": 3,
+        "chunks": 9,
+        "edits": 40,
+        "intervalMs": 250,
+        "radius": 24,
+        "seed": 1337,
+        "voxelsRemoved": 916780,
+        "frames": {
+          "frames": 631,
+          "totalMs": 10516.785000000033,
+          "avg": 16.666854199683094,
+          "median": 16.665000000037253,
+          "p95": 16.67000000004191,
+          "p99": 16.67000000004191,
+          "max": 16.675000000046566,
+          "hitches": 0,
+          "over33": 0,
+          "wallMs": 10515.270000000019,
+          "coverage": 1.0001440761863474
+        },
+        "editMs": {
+          "median": 9.93500000005588,
+          "mean": 9.627875000052153,
+          "p95": 22.826750000147147,
+          "max": 23.735000000800937
+        },
+        "latencyMs": {
+          "median": 17.537500000093132,
+          "max": 51.94500000029802
+        },
+        "chunksPerEdit": 1.8,
+        "gpuMs": 7.0914,
+        "passMs": {
+          "mask": 0.10502,
+          "merge": 6.97868,
+          "finalize": 0.008320000000000001
+        },
+        "bytesUpPerEdit": 72224.2,
+        "bytesDownPerEdit": 57.6
+      }
+    },
+    {
+      "gridSize": 3,
+      "mode": "gpu-direct",
+      "repeat": 3,
+      "initial": {
+        "chunks": 9,
+        "quadCount": 446399,
+        "naiveFaces": null,
+        "totalMs": 33.77000000001863,
+        "submitMs": 1.4050000002607703,
+        "gpuMs": 23.499760000000002,
+        "passMs": {
+          "mask": 0.3562,
+          "merge": 23.10992,
+          "finalize": 0.033639999999999996
+        },
+        "readbackMs": 0,
+        "bytesUp": 1057536,
+        "bytesDown": 288,
+        "overflowed": false,
+        "grew": 0,
+        "perChunkMs": [
+          5.274999999906868,
+          3.75,
+          3.9050000002607703,
+          3.5899999998509884,
+          3.6000000000931323,
+          3.584999999962747,
+          2.915000000037253,
+          3.5750000001862645,
+          3.5749999997206032
+        ]
+      },
+      "edit": {
+        "mode": "gpu-direct",
+        "gridSize": 3,
+        "chunks": 9,
+        "edits": 40,
+        "intervalMs": 250,
+        "radius": 24,
+        "seed": 1337,
+        "voxelsRemoved": 916780,
+        "frames": {
+          "frames": 631,
+          "totalMs": 10516.785000000033,
+          "avg": 16.666854199683094,
+          "median": 16.665000000037253,
+          "p95": 16.67000000004191,
+          "p99": 16.67000000004191,
+          "max": 16.67000000004191,
+          "hitches": 0,
+          "over33": 0,
+          "wallMs": 10521.410000000149,
+          "coverage": 0.9995604201337923
+        },
+        "editMs": {
+          "median": 9.990000000223517,
+          "mean": 9.652875000052154,
+          "p95": 21.760250000399534,
+          "max": 23.71499999985099
+        },
+        "latencyMs": {
+          "median": 21.53000000002794,
+          "max": 55.825000000186265
+        },
+        "chunksPerEdit": 1.8,
+        "gpuMs": 7.24774,
+        "passMs": {
+          "mask": 0.10425999999999999,
+          "merge": 7.13464,
+          "finalize": 0.00904
+        },
+        "bytesUpPerEdit": 72224.2,
+        "bytesDownPerEdit": 57.6
+      }
+    }
+  ]
+}

@@ -77,7 +77,8 @@ export default function VoxelEnginePrototype() {
   const [recorder] = useState(() => new FrameRecorder());
   const [check, setCheck] = useState(null); // correctness check report
   const [mergeAb, setMergeAb] = useState({ running: false, progress: null, report: null }); // legacy vs bit-run merge timing
-  const [sweepMax, setSweepMax] = useState(4); // sweep grids 1x1 .. sweepMax x sweepMax
+  const [sweepMin, setSweepMin] = useState(1); // sweep grids sweepMin x sweepMin .. sweepMax x sweepMax
+  const [sweepMax, setSweepMax] = useState(4);
   const [sweep, setSweep] = useState({ running: false, progress: null, idle: null, runs: [], summary: [], meta: null });
 
   // Event handlers registered once (pointer events, render loop) need current values.
@@ -525,7 +526,7 @@ export default function VoxelEnginePrototype() {
 
   // ---- sweep: grid sizes x modes x repeats ---------------------------------
   const sweepModes = Object.keys(MODES).filter((m) => available[m]);
-  const sweepGrids = Array.from({ length: sweepMax }, (_, i) => i + 1);
+  const sweepGrids = Array.from({ length: Math.max(0, sweepMax - sweepMin + 1) }, (_, i) => sweepMin + i);
 
   const runSweepBenchmark = async () => {
     const ctrl = ctx.current.controller;
@@ -763,8 +764,16 @@ export default function VoxelEnginePrototype() {
         <div style={section}>
           <div style={{ marginBottom: '6px' }}><strong>🧪 Sweep benchmark</strong></div>
           <div style={{ fontSize: '12px', color: '#95a5a6', marginBottom: '8px' }}>
-            For each world from 1×1 to{' '}
-            <select value={sweepMax} disabled={locked} onChange={(e) => setSweepMax(Number(e.target.value))}>
+            For each world from{' '}
+            <select value={sweepMin} disabled={locked} onChange={(e) => setSweepMin(Number(e.target.value))}>
+              {Array.from({ length: sweepMax }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}×{n}</option>)}
+            </select>
+            {' '}to{' '}
+            <select value={sweepMax} disabled={locked} onChange={(e) => {
+              const n = Number(e.target.value);
+              setSweepMax(n);
+              setSweepMin((m) => Math.min(m, n));
+            }}>
               {Array.from({ length: MAX_GRID_SIZE }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}×{n}</option>)}
             </select>
             {' '}and each available mode, {SWEEP_REPEATS} runs of: full meshing of the grid + the edit benchmark above.
