@@ -26,6 +26,22 @@ const VOXEL_BUFFER_BYTES = (CHUNK_SIZE ** 3) / 8;
  * retains megabytes of vertex arrays per chunk and runs the tab out of memory.
  */
 export const withoutMesh = ({ geometry, mesh, ...rest }) => rest;
+
+/**
+ * Disposes a CPU-side geometry and drops its vertex arrays.
+ *
+ * Three r185's WebGPU renderer keeps every RenderObject it ever drew alive until the
+ * *material* is disposed (the RenderObject registers a dispose listener on it), and the
+ * RenderObject keeps its mesh and last geometry. Our materials live for the whole
+ * session, so a disposed geometry was never freed: each CPU or readback remesh leaked
+ * its ~6 MB of arrays until the tab failed with "Array buffer allocation failed".
+ * Removing the attributes after dispose() leaves only the empty geometry object behind.
+ */
+function releaseGeometry(geometry) {
+  geometry.dispose(); // frees the GPU buffers (Three reads the attributes during this call)
+  for (const name of Object.keys(geometry.attributes)) geometry.deleteAttribute(name);
+  geometry.setIndex(null);
+}
 const COUNTER_BYTES = 32;
 
 /**
@@ -113,6 +129,9 @@ export class MeshController {
     this._shown = new Map(); // chunk -> THREE.Mesh in the scene
     this._shownQuads = new Map(); // chunk -> quad count of the shown mesh (null if unknown)
     this._direct = new Map(); // chunk -> { mesh, target, gpuBytes, dispose }
+    // chunk -> THREE.Mesh for CPU-built geometry, reused across remeshes so Three keeps
+    // one RenderObject per chunk instead of one per remesh (see releaseGeometry)
+    this._cpuMeshes = new Map();
     this._gpuChunks = new Set(); // chunks with a GPU occupancy mirror
     this._readbackTarget = null;
     this._inflight = null;
@@ -279,12 +298,23 @@ export class MeshController {
     const old = this._shown.get(chunk);
     let mesh = result.mesh;
     if (!mesh) {
-      mesh = new THREE.Mesh(result.geometry, this.materials[mode]);
-      mesh.name = 'voxelMesh';
+      // CPU-built geometry: swap it into this chunk's mesh rather than making a new one.
+      mesh = this._cpuMeshes.get(chunk);
+      if (mesh) {
+        const previous = mesh.geometry;
+        mesh.geometry = result.geometry;
+        mesh.material = this.materials[mode];
+        if (previous !== result.geometry) releaseGeometry(previous);
+      } else {
+        mesh = new THREE.Mesh(result.geometry, this.materials[mode]);
+        mesh.name = 'voxelMesh';
+        this._cpuMeshes.set(chunk, mesh);
+      }
     }
     if (old && old !== mesh) {
       this.scene.remove(old);
-      if (![...this._direct.values()].some((d) => d.mesh === old)) old.geometry.dispose();
+      // A CPU mesh replaced by a direct one: free its geometry until it is needed again.
+      if (this._cpuMeshes.get(chunk) === old) releaseGeometry(old.geometry);
     }
     const [ox, oy, oz] = this.world.origin(chunk);
     mesh.position.set(ox, oy, oz);
@@ -311,7 +341,7 @@ export class MeshController {
 
   /** Disposes a combined result's CPU geometries without showing them (benchmark runs). */
   discard(result) {
-    for (const r of result.perChunk) r.geometry?.dispose();
+    for (const r of result.perChunk) if (r.geometry) releaseGeometry(r.geometry);
   }
 
   /**
@@ -368,10 +398,9 @@ export class MeshController {
   }
 
   _releaseWorld() {
-    for (const mesh of this._shown.values()) {
-      this.scene.remove(mesh);
-      if (![...this._direct.values()].some((d) => d.mesh === mesh)) mesh.geometry.dispose();
-    }
+    for (const mesh of this._shown.values()) this.scene.remove(mesh);
+    for (const mesh of this._cpuMeshes.values()) releaseGeometry(mesh.geometry);
+    this._cpuMeshes.clear();
     this._shown.clear();
     this._shownQuads.clear();
     for (const d of this._direct.values()) d.dispose();

@@ -180,6 +180,8 @@ export default function VoxelEnginePrototype() {
       const controller = new MeshController({ scene, mesher: c.mesher, bridge: c.mesher ? bridge : null, world: c.world });
       c.world = controller.world;
       c.controller = controller;
+      // Dev builds only: lets a DevTools console or a test script drive the engine directly.
+      if (import.meta.env.DEV) window.__voxel = { controller, mesher: c.mesher, renderer, scene, createWorld };
       setAvailable(Object.fromEntries(Object.keys(MODES).map((m) => [m, controller.isAvailable(m)])));
       setGridSize(controller.world.gridSize);
 
