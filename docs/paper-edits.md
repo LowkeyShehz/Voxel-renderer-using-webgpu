@@ -37,6 +37,10 @@ New footnote: *Medians of 55 alternating rounds on each GPU; mask pass 0.066 ms 
 Spread on the RX 5600 XT, if wanted: legacy 6.26–6.42 ms and bit-run 2.16–2.28 ms (25th–75th percentile).
 The median of the per-round ratios is also 2.83×.
 
+Repeatability: a second A/B run 28 minutes later (`merge-ab-2026-11-25T13-59-47-945Z.json`) gave legacy 6.37 ms,
+bit-run 2.17 ms, 2.93× (per-round 2.84×). Keep the first run in the table and add to the footnote: *"A repeat
+run gave 2.9×."* Or report the range: "2.8–2.9× over two sessions".
+
 ## 3. Section VI.D: add after the laptop sentence
 
 > On the RX 5600 XT, timed the same way, the bit-run merge took 2.23 ms against 6.30 ms,
@@ -205,6 +209,48 @@ Note on the heap figures: they are `performance.memory` readings taken right aft
 collection timing makes them jump around (26 → 57 → 27 → 28 → 73 → 31 MB). The claim they support is "does not
 grow with the number of chunks", not an exact figure.
 
-## 9. STILL OPEN
+## 9. Citation check (all 24 references, 2026-11-25)
 
-- **Citations.** These have not been checked, especially the 2025 references.
+Checked against Crossref/DataCite DOI metadata, the arXiv API, publisher or repository pages, and live URLs.
+
+**Fix:**
+- **[9]** First author is **Ciril** Bohak, so "Ž. Bohak" should be **"C. Bohak"** (Crossref, arXiv). Optionally
+  add doi: 10.1051/epjconf/202429503035. Everything else (EPJ Web Conf. vol. 295, art. 03035, 2024, CHEP 2023,
+  arXiv:2312.11729) is correct.
+- **[16]** The title is right for the journal version, but the reference should carry the TVCG details:
+  *IEEE Trans. Vis. Comput. Graph.*, vol. 31, no. 9, pp. 6241–6252, Sep. 2025, doi: 10.1109/TVCG.2024.3502672.
+  The arXiv entry (2403.06505v2) is now titled just "Voxel-Mesh Hybrid Representation for Real-Time View
+  Synthesis", so cite the TVCG version rather than arXiv alone.
+- **[21]** The dissertation (Aiden Knight, BSc Games Development, Feb. 2025) names the institution
+  **"University of Staffordshire"** (renamed from Staffordshire University). Match the document. A link is
+  available: https://gradex.staffs.ac.uk/wp-content/uploads/2025/05/5301_Aiden-Knight-Dissertation-pdf.pdf
+
+**Correct as printed** (optional DOIs worth adding in brackets):
+- [1] 0fps post, June 30, 2012; URL live.
+- [2] Kämpe, Sintorn, Assarsson, ACM TOG 32(4), Art. 101, 2013; DOI matches.
+- [3] Fang, Wang, Wang, PACMCGIT 8(1), Art. 10, May 2025; arXiv:2505.02017 (doi: 10.1145/3728299).
+- [4] Molenaar, Eisemann, Pacific Graphics 2024; DOI 10.2312/pg.20241310 resolves to this paper.
+- [5] Richermoz, Neyret, HPG 2024, hal-04654692; title matches HAL. The HPG program used a slightly different
+  title ("Starvation-less asynchronous render and production…"); HAL is the right one to cite.
+- [6] [7] W3C WebGPU / WGSL: both are currently "Candidate Recommendation Draft". Calling them
+  "Candidate Recommendation" is acceptable; add an access date (e.g. "accessed Nov. 2026") since they change.
+- [8] Bi, Ma, Han, Chen, Tian, Du, WWW 2024, pp. 2890–2901 (doi: 10.1145/3589334.3645395).
+- [10] three.js release r185 exists; matches package.json.
+- [11] github.com/cgerikj/binary-greedy-meshing is live.
+- [12] Amanatides & Woo, Eurographics 1987 (doi: 10.2312/egtp.19871000). DOI metadata has no page numbers;
+  pp. 3–10 is the commonly cited range.
+- [13] Mahmoud, Porumbescu, Owens, ACM TOG 44(4), Art. 136, 2025 (doi: 10.1145/3731162).
+- [14] Schütz, Kerbl, Klaus, Wimmer, CGF 42(8), e14877, 2023; DOI matches.
+- [15] Ye, Liu et al., CSSE 47(2), pp. 2529–2545, 2023; DOI matches (7 authors; "et al." fine).
+- [17] StreamingGS, arXiv:2506.09070, June 2025; all listed authors correct. No published venue found, so it
+  is correctly cited as a preprint.
+- [18] LODGE, NeurIPS 2025 (vol. 38) confirmed on the NeurIPS proceedings site; arXiv:2505.23158 correct.
+- [19] Stucki, Ackermann, Web3D 2024; DOI matches.
+- [20] Andrejs Kavalans, Theseus handle 10024/893260 exists with this title. The degree level ("Bachelor's
+  thesis") could not be confirmed because the Theseus page blocks automated access; check it in a browser.
+- [22] Lorensen & Cline, Comput. Graph. 21(4), 163–169, 1987; DOI matches.
+- [23] Laine & Karras, I3D 2010, pp. 55–63; DOI matches.
+- [24] Crassin, Neyret, Lefebvre, Eisemann, I3D 2009, pp. 15–22; DOI matches.
+
+Table II claims spot-checked against the abstracts: Aokana "up to 4.8× faster, up to 9× less memory" and
+GigaVoxels DP "about 2×" both match. The others were not re-read in full.
