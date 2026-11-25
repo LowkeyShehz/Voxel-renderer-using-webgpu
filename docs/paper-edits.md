@@ -6,6 +6,9 @@ Every number below comes from a committed export in `benchmarks/`. Items marked
 Sources:
 - `benchmarks/phase5/merge-ab-2026-11-25T13-31-51-920Z.json`: merge A/B, 55 alternating rounds
 - `benchmarks/phase5/sweep-2026-11-25T13-58-50-605Z-r24-1to3.json`: sweep 1×1–3×3, radius 24, 3 runs each, bit-run merge
+- `benchmarks/phase5/sweep-2026-11-25T14-43-22-210Z-r24-4x4.json`: sweep 4×4 only, same settings, run in a fresh tab after the
+  memory-leak fix (commit 898113c). The 1×1–3×3 runs used the code from before that fix; the fix changes memory use,
+  not the meshing work, but say so if a reviewer asks why the 4×4 row was measured separately.
 - In-app correctness check (screenshot, same session)
 - `benchmarks/phase4/edit-benchmark-2026-10-06T18-04-57-411Z.json`: the data behind Tables V–VI (legacy merge)
 
@@ -45,7 +48,7 @@ wording for IV.E:
 > On the RX 5600 XT this pass took 13.85 ms of a 13.9 ms remesh during the edit benchmark (6.3 ms when
 > timed on its own), so it was the whole cost.
 
-## 4. Table VIII: fill rows 1×1–3×3
+## 4. Table VIII: fill all four rows
 
 Bit-run merge, radius 24, medians of 3 runs. Every run had 100% frame coverage (0.999–1.001).
 
@@ -54,19 +57,24 @@ Bit-run merge, radius 24, medians of 3 runs. Every run had 100% frame coverage (
 | 1×1 | 120.6 | 6.2 | 116.7 | 16.7 |
 | 2×2 | 490.8 | 17.3 | 500.0 | 16.7 |
 | 3×3 | 1064.5 | 36.5 | 500.0 | 16.7 |
-| 4×4 | **STILL OPEN** | | | |
+| 4×4 | 1892.7 | 61.6 | 483.3 | 16.7 |
 
 Values are in ms. "GPU max frame" is GPU direct. GPU + readback also stayed at 16.7 ms, except one
 33.3 ms frame in one of the three 3×3 runs (0–1 hitches).
 
-Suggested text to replace the VI.D TODO (reword once 4×4 is in):
+Suggested text to replace the VI.D TODO:
 
-> Full meshing grew in proportion to the number of chunks on both paths: about 120 ms per chunk on the
-> CPU (120.6, 490.8 and 1064.5 ms for 1, 4 and 9 chunks) against 4–6 ms per chunk for GPU direct
-> (6.2, 17.3 and 36.5 ms). During edits the CPU's worst frame rose from 117 ms on one chunk to 500 ms
-> on 2×2 and 3×3 worlds, where one explosion can dirty several chunks. Every frame of the GPU direct
-> path stayed at 16.7 ms, and it moved about 70 KB per edit on the larger worlds, against 9.4–10 MB on
-> the CPU path.
+> Full meshing grew in proportion to the number of chunks on both paths: about 118–123 ms per chunk on
+> the CPU (120.6, 490.8, 1064.5 and 1892.7 ms for 1, 4, 9 and 16 chunks) against about 4–6 ms per chunk
+> for GPU direct (6.2, 17.3, 36.5 and 61.6 ms), a 31× gap at 4×4. During edits the CPU's worst frame
+> rose from 117 ms on one chunk to about 500 ms on the larger worlds, where one explosion dirties
+> several chunks (2.3 on average at 4×4). On the 4×4 world the CPU path never recovered between edits:
+> its median frame was 125 ms and 52 frames exceeded 33 ms. Every frame of the GPU direct path stayed at
+> 16.7 ms on every world size, and it moved 70–78 KB per edit, against 9.4–13 MB on the CPU path.
+
+Hitch count caveat for 4×4 CPU: "hitches" are frames slower than twice the *median* frame. Because the
+median CPU frame was itself 125 ms, only 13 frames counted as hitches. Quote ">33 ms frames" (52) for
+that row instead.
 
 Supporting medians (same file):
 
@@ -80,7 +88,11 @@ Supporting medians (same file):
 | 3×3 | CPU | 223.0 | 9,967 | — |
 | 3×3 | GPU direct | 10.0 | 70.5 | 7.25 |
 
-GPU + readback on 2×2 and 3×3: 13.8 and 27.2 ms per edit, about 7.5–8.0 MB up and down.
+| 4×4 | CPU | 231.3 | 13,177 | — |
+| 4×4 | GPU direct | 11.2 | 77.6 | 7.77 |
+
+GPU + readback on 2×2, 3×3 and 4×4: 13.8, 27.2 and 29.9 ms per edit, about 7.5–10.6 MB up and down.
+Full meshing with readback on 4×4: 231.5 ms.
 
 ## 5. Tables IV–VI: optional bit-run rows (1×1, radius 24, final code)
 
@@ -102,7 +114,9 @@ KB per edit is averaged over all 40 edits. Two of them landed while a remesh was
 into it (0.95 chunks remeshed per edit), which is why CPU→GPU here is 3,943 KB rather than Table VI's
 4,122 KB. The meshes themselves are identical.
 
-Table IV static numbers on the final code: **STILL OPEN** (needs Benchmark ×20 per mode in 1×1).
+Table IV static numbers on the final code: CPU greedy, from the app's Benchmark ×20 panel (screenshot, 1×1):
+median 119.98 ms, best 117.80 ms. The two GPU rows are **STILL OPEN** (run Benchmark ×20 in GPU + Readback
+and GPU Direct). Benchmark ×20 has no export button, so keep a screenshot of each panel as the record.
 
 ## 6. Section VI.E "Where the system lags": update
 
@@ -118,8 +132,9 @@ Keep the point that the merge is still serial within a slice.
 - **Abstract.** "cut merge time from 2.82 ms to 1.25 ms on a second GPU" becomes "cut merge time
   2.8-fold on the RX 5600 XT (6.30 to 2.23 ms) and 2.3-fold on a second GPU".
 - **Conclusion, Outcome.** Same change.
-- **Conclusion, Limitations.** "the multi-chunk scaling results and the bit-run timing on the main GPU
-  are still to be measured" becomes "scaling was measured up to 3×3 chunks". Update this once 4×4 is in.
+- **Conclusion, Limitations.** Drop "the multi-chunk scaling results and the bit-run timing on the main GPU
+  are still to be measured". Scaling was measured up to 4×4 chunks (16 chunks, 817,291 quads); larger
+  worlds (5×5, 6×6) were not benchmarked.
 
 ## 8. Text that no longer matches the code
 
@@ -138,7 +153,5 @@ Keep the point that the merge is still serial within a slice.
 - **IV.G memory per chunk.** Read the *World* line in GPU Direct at 1×1, 2×2, 4×4 and 6×6. From the
   code, expect 6.0 MiB output and 108 KB of voxels per chunk, plus about 0.64 MiB of shared scratch.
   This must be confirmed by measurement before it goes in.
-- **Table VIII 4×4 row.** A sweep from 1×1 ran out of memory when it reached 4×4. Re-run with
-  *from 4×4 to 4×4* in a freshly loaded tab.
 - **Table IV** on the final code (see section 5).
 - **Citations.** These have not been checked, especially the 2025 references.
