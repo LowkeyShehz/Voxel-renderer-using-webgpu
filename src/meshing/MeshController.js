@@ -1,10 +1,12 @@
 import * as THREE from 'three';
-import { ChunkData } from '../voxel/ChunkData';
+import { CHUNK_SIZE } from '../voxel/ChunkData';
+import { ChunkManager } from '../voxel/ChunkManager.js';
 import { TerrainGenerator } from '../voxel/TerrainGenerator';
 import { cpuGreedyMeshGeneration } from './cpuGreedyMesh';
+import { growCapacity, MAX_CAPACITY, POSITION_STRIDE_BYTES } from './gpuMeshPipeline';
 
 /**
- * Three meshing modes over the same chunk, for the CPU-vs-GPU benchmark:
+ * Three meshing modes over the same world, for the CPU-vs-GPU benchmark:
  *   cpu          - CPU greedy meshing, geometry built on the CPU
  *   gpu-readback - GPU greedy meshing, vertices copied back to the CPU (mapAsync)
  *   gpu-direct   - GPU greedy meshing, vertices stay on the GPU and are drawn with
@@ -16,16 +18,99 @@ export const MODES = {
   'gpu-direct': { label: 'GPU Direct (zero-copy)', color: 0x2ecc71 },
 };
 
+const VOXEL_BUFFER_BYTES = (CHUNK_SIZE ** 3) / 8;
+
 /**
- * Owns the chunk and whatever is currently shown for it, and knows how to
- * (re)mesh it in each mode. The UI, the editor and the benchmarks all go through
- * this so they measure exactly the same code path.
+ * A per-chunk result without its geometry/mesh, for results kept after the mesh is
+ * shown. Benchmarks hold many results at once; keeping the geometries alive with them
+ * retains megabytes of vertex arrays per chunk and runs the tab out of memory.
+ */
+export const withoutMesh = ({ geometry, mesh, ...rest }) => rest;
+
+/**
+ * Disposes a CPU-side geometry and drops its vertex arrays.
  *
- * Every measure()/remesh() result has the same shape:
- *   { quadCount|null, totalMs, submitMs|null, gpuMs|null, passMs|null, readbackMs,
- *     bytesUp, bytesDown, overflowed?, geometry? | mesh? }
- *   bytesUp   - bytes sent CPU -> GPU for this remesh (occupancy delta, or geometry upload)
- *   bytesDown - bytes copied GPU -> CPU (vertex readback)
+ * Three r185's WebGPU renderer keeps every RenderObject it ever drew alive until the
+ * *material* is disposed (the RenderObject registers a dispose listener on it), and the
+ * RenderObject keeps its mesh and last geometry. Our materials live for the whole
+ * session, so a disposed geometry was never freed: each CPU or readback remesh leaked
+ * its ~6 MB of arrays until the tab failed with "Array buffer allocation failed".
+ * Removing the attributes after dispose() leaves only the empty geometry object behind.
+ */
+function releaseGeometry(geometry) {
+  geometry.dispose(); // frees the GPU buffers (Three reads the attributes during this call)
+  for (const name of Object.keys(geometry.attributes)) geometry.deleteAttribute(name);
+  geometry.setIndex(null);
+}
+const COUNTER_BYTES = 32;
+
+/**
+ * Resolves on the next animation frame, so queued work lets a frame render in between.
+ * Falls back to a timeout: requestAnimationFrame never fires in a hidden tab, which
+ * would otherwise leave a queued remesh (and any benchmark awaiting it) hanging.
+ */
+const nextFrame = (timeoutMs = 100) =>
+  new Promise((resolve) => {
+    const timer = setTimeout(resolve, timeoutMs);
+    requestAnimationFrame(() => {
+      clearTimeout(timer);
+      resolve();
+    });
+  });
+
+export function createWorld(gridSize = 1) {
+  return new ChunkManager({ gridSize, generator: new TerrainGenerator() });
+}
+
+/**
+ * Adds per-chunk results into one result of the same shape. Times, bytes and
+ * quads are summed (chunks are meshed one after another); passMs is summed per
+ * pass; quadCount is null if any chunk's count is unknown.
+ */
+function combine(results) {
+  const sum = (key) => {
+    const v = results.map((r) => r[key]).filter((x) => typeof x === 'number');
+    return v.length ? v.reduce((a, b) => a + b, 0) : null;
+  };
+  let passMs = null;
+  for (const r of results) {
+    if (!r.passMs) continue;
+    passMs ??= {};
+    for (const [name, ms] of Object.entries(r.passMs)) passMs[name] = (passMs[name] ?? 0) + ms;
+  }
+  return {
+    chunks: results.length,
+    quadCount: results.every((r) => typeof r.quadCount === 'number') ? sum('quadCount') : null,
+    naiveFaces: results.every((r) => typeof r.naiveFaces === 'number') ? sum('naiveFaces') : null,
+    totalMs: sum('totalMs') ?? 0,
+    submitMs: sum('submitMs'),
+    gpuMs: sum('gpuMs'),
+    passMs,
+    readbackMs: sum('readbackMs') ?? 0,
+    bytesUp: sum('bytesUp') ?? 0,
+    bytesDown: sum('bytesDown') ?? 0,
+    overflowed: results.some((r) => r.overflowed),
+    grew: results.filter((r) => r.grew).length,
+    perChunk: results,
+  };
+}
+
+/**
+ * Owns the world (a ChunkManager) and whatever is shown for each chunk, and knows
+ * how to (re)mesh chunks in each mode. The UI, the editor and the benchmarks all go
+ * through this so they measure exactly the same code path.
+ *
+ * Per-chunk results have the shape
+ *   { chunk, quadCount|null, naiveFaces|null, totalMs, submitMs|null, gpuMs|null,
+ *     passMs|null, readbackMs, bytesUp, bytesDown, overflowed, grew, geometry? | mesh? }
+ *   totalMs   - meshing time for this chunk (CPU: generation; GPU: upload + compute
+ *               to queue completion; readback: up to vertices on the CPU)
+ *   bytesUp   - bytes sent CPU -> GPU (occupancy delta + neighbour borders, or geometry)
+ *   bytesDown - bytes copied GPU -> CPU (vertex readback; 32 counter bytes in direct
+ *               mode, read after the timed region to detect buffer overflow)
+ * and multi-chunk results are combine()d into the same shape plus `chunks`,
+ * `perChunk` and, for queued remeshes, `wallMs` (start to finish including the
+ * frames rendered between chunks).
  */
 export class MeshController {
   /**
@@ -33,20 +118,23 @@ export class MeshController {
    * @param {THREE.Scene} opts.scene
    * @param {import('./gpuMeshPipeline').GpuMesher|null} opts.mesher   null when WebGPU is unavailable
    * @param {import('../render/DirectRenderBridge').DirectRenderBridge|null} opts.bridge
-   * @param {ChunkData} [opts.chunk]  reused across controller instances so edits survive a remount
+   * @param {ChunkManager} [opts.world]  reused across controller instances so edits survive a remount
    */
-  constructor({ scene, mesher, bridge, chunk }) {
+  constructor({ scene, mesher, bridge, world }) {
     this.scene = scene;
     this.mesher = mesher;
     this.bridge = bridge;
-    this.generator = new TerrainGenerator();
-    this.chunk = chunk ?? this._newChunk();
-    this.naiveFaces = null;
+    this.world = world ?? createWorld(1);
 
-    this._direct = null; // { mesh, target, dispose }
+    this._shown = new Map(); // chunk -> THREE.Mesh in the scene
+    this._shownQuads = new Map(); // chunk -> quad count of the shown mesh (null if unknown)
+    this._direct = new Map(); // chunk -> { mesh, target, gpuBytes, dispose }
+    // chunk -> THREE.Mesh for CPU-built geometry, reused across remeshes so Three keeps
+    // one RenderObject per chunk instead of one per remesh (see releaseGeometry)
+    this._cpuMeshes = new Map();
+    this._gpuChunks = new Set(); // chunks with a GPU occupancy mirror
     this._readbackTarget = null;
     this._inflight = null;
-    this._wantRemesh = false;
 
     this.materials = Object.fromEntries(
       Object.entries(MODES).map(([key, { color }]) => [
@@ -56,52 +144,78 @@ export class MeshController {
     );
   }
 
-  _newChunk() {
-    const chunk = new ChunkData();
-    this.generator.generate(chunk);
-    return chunk;
-  }
-
   isAvailable(mode) {
     if (mode === 'cpu') return true;
     if (mode === 'gpu-readback') return !!this.mesher;
     return !!this.mesher && !!this.bridge?.isWebGPU;
   }
 
-  // ---- editing -------------------------------------------------------------
-
-  /** Removes a sphere of voxels; returns how many were removed. */
-  explode(x, y, z, radius) {
-    return this.chunk.carveSphere(x, y, z, radius);
+  /** Replaces the world (e.g. a new grid size); frees everything owned for the old one. */
+  setWorld(world) {
+    this._releaseWorld();
+    this.world = world;
   }
 
-  /** Restores the original terrain (all words marked dirty for the GPU mirror). */
+  // ---- editing -------------------------------------------------------------
+
+  /** Removes a sphere of voxels (world coordinates); returns how many were removed. */
+  explode(x, y, z, radius) {
+    return this.world.carveSphere(x, y, z, radius).removed;
+  }
+
+  setVoxel(x, y, z, solid) {
+    return this.world.set(x, y, z, solid);
+  }
+
+  /** Restores the original terrain (every chunk becomes dirty). */
   resetTerrain() {
-    this.chunk.clear();
-    this.generator.generate(this.chunk);
+    this.world.resetTerrain();
+  }
+
+  // ---- memory --------------------------------------------------------------
+
+  /**
+   * GPU memory held for meshing, in bytes (excludes Three's own scene buffers).
+   *   outputBytes       - all vertex output: directOutputBytes + readbackBytes
+   *   directOutputBytes - zero-copy vertex + indirect buffers, one per chunk (directMeshes)
+   *   readbackBytes     - the single readback target, kept once GPU + readback has been used
+   *   voxelBytes        - GPU occupancy mirrors, one per chunk meshed on the GPU (voxelChunks)
+   *   scratchBytes      - slice masks + neighbour border planes, shared by all chunks
+   */
+  gpuMemory() {
+    let directOutputBytes = 0;
+    for (const d of this._direct.values()) directOutputBytes += d.gpuBytes;
+    const readbackBytes = this._readbackTarget ? this._readbackTarget.capacity * POSITION_STRIDE_BYTES + COUNTER_BYTES : 0;
+    return {
+      outputBytes: directOutputBytes + readbackBytes,
+      directOutputBytes,
+      directMeshes: this._direct.size,
+      readbackBytes,
+      voxelBytes: this._gpuChunks.size * VOXEL_BUFFER_BYTES,
+      voxelChunks: this._gpuChunks.size,
+      scratchBytes: this.mesher?.scratchBytes ?? 0,
+    };
   }
 
   // ---- meshing -------------------------------------------------------------
 
-  /**
-   * Meshes the chunk in `mode` without touching the scene.
-   * @param {{withCounters?: boolean}} [opts] withCounters=false skips the 32-byte
-   *   counter read that supplies the quad count in direct mode (keeps benchmarks lean).
-   */
-  async measure(mode, { withCounters = true } = {}) {
+  /** Meshes one chunk in `mode` (with its neighbours) without touching the scene. */
+  async meshChunk(chunk, mode) {
     if (!this.isAvailable(mode)) throw new Error(`${MODES[mode].label} is not available on this device.`);
+    const neighbours = this.world.neighbours(chunk);
 
     if (mode === 'cpu') {
-      const r = cpuGreedyMeshGeneration(this.chunk);
-      this.naiveFaces = r.naiveFaceCount;
+      const r = cpuGreedyMeshGeneration(chunk, neighbours);
       const g = r.geometry;
       const geometryBytes =
         g.attributes.position.array.byteLength +
         g.attributes.normal.array.byteLength +
         g.index.array.byteLength;
       return {
+        chunk,
         geometry: g,
         quadCount: r.quadCount,
+        naiveFaces: r.naiveFaceCount,
         totalMs: r.time,
         submitMs: null,
         gpuMs: null,
@@ -109,93 +223,206 @@ export class MeshController {
         readbackMs: 0,
         bytesUp: geometryBytes, // Three uploads the freshly built geometry on the next draw
         bytesDown: 0,
+        overflowed: false,
+        grew: false,
       };
     }
 
-    if (mode === 'gpu-readback') {
-      this._readbackTarget ??= this.mesher.createReadbackTarget();
-      const r = await this.mesher.meshWithReadback(this.chunk, this._readbackTarget);
-      return {
-        ...r,
-        // occupancy delta up, vertices down, then Three uploads those vertices again
-        bytesUp: r.uploadedBytes + r.readbackBytes,
-        bytesDown: r.readbackBytes,
-      };
-    }
+    this._gpuChunks.add(chunk);
+    return mode === 'gpu-readback' ? this._meshReadback(chunk, neighbours) : this._meshDirect(chunk, neighbours);
+  }
 
-    // gpu-direct: upload occupancy delta, compute, done. Vertices never leave the GPU.
-    this._direct ??= this.bridge.createDirectMesh(this.materials['gpu-direct']);
+  async _meshReadback(chunk, neighbours, grew = false) {
+    this._readbackTarget ??= this.mesher.createReadbackTarget();
+    const target = this._readbackTarget;
+    const r = await this.mesher.meshWithReadback(chunk, target, { neighbours });
+    if (r.overflowed && target.capacity < MAX_CAPACITY) {
+      r.geometry.dispose();
+      this.mesher.destroyTarget(target);
+      this._readbackTarget = this.mesher.createReadbackTarget(growCapacity(r.requestedVertices));
+      return this._meshReadback(chunk, neighbours, true);
+    }
+    return {
+      ...r,
+      chunk,
+      naiveFaces: null,
+      // occupancy delta (+ borders) up, vertices down, then Three uploads those vertices again
+      bytesUp: r.uploadedBytes + r.readbackBytes,
+      bytesDown: r.readbackBytes,
+      grew,
+    };
+  }
+
+  // gpu-direct: upload occupancy delta, compute, done. Vertices never leave the GPU.
+  async _meshDirect(chunk, neighbours, grew = false) {
+    let direct = this._direct.get(chunk);
+    if (!direct) {
+      direct = this.bridge.createDirectMesh(this.materials['gpu-direct']);
+      this._direct.set(chunk, direct);
+    }
     const t0 = performance.now();
-    const { submitMs, uploadedBytes, gpuMs } = this.mesher.mesh(this.chunk, this._direct.target, { profile: true });
+    const { submitMs, uploadedBytes, gpuMs } = this.mesher.mesh(chunk, direct.target, { profile: true, neighbours });
     await this.mesher.whenIdle(); // waits for completion; reads nothing back
     const totalMs = performance.now() - t0;
     const timing = await gpuMs;
 
-    // Stats only (32 bytes), outside the timed region.
-    const counters = withCounters ? await this.mesher.readCounters(this._direct.target) : null;
+    // Counters (32 bytes), outside the timed region: the quad count, and whether the
+    // output buffer was too small. On overflow the chunk gets a bigger buffer and is
+    // meshed again; the shown mesh is truncated only until that finishes.
+    const counters = await this.mesher.readCounters(direct.target);
+    if (counters.overflowed && direct.target.capacity < MAX_CAPACITY) {
+      this._replaceDirect(chunk, growCapacity(counters.requestedVertices));
+      return this._meshDirect(chunk, neighbours, true);
+    }
     return {
-      mesh: this._direct.mesh,
-      quadCount: counters?.quadCount ?? null,
-      overflowed: counters?.overflowed ?? false,
+      chunk,
+      mesh: direct.mesh,
+      quadCount: counters.quadCount,
+      naiveFaces: null,
+      overflowed: counters.overflowed,
+      grew,
       totalMs,
       submitMs,
       gpuMs: timing?.totalMs ?? null,
       passMs: timing?.passMs ?? null,
       readbackMs: 0,
       bytesUp: uploadedBytes,
-      bytesDown: 0,
+      bytesDown: COUNTER_BYTES,
     };
   }
 
-  /** Puts a measured result into the scene, replacing whatever was shown. */
-  show(result, mode) {
-    const old = this.scene.getObjectByName('voxelMesh');
+  _replaceDirect(chunk, capacity) {
+    const old = this._direct.get(chunk);
     if (old) {
-      this.scene.remove(old);
-      if (old !== this._direct?.mesh) old.geometry.dispose();
+      if (this._shown.get(chunk) === old.mesh) {
+        this.scene.remove(old.mesh);
+        this._shown.delete(chunk);
+      }
+      old.dispose();
     }
-
-    let mesh = result.mesh;
-    if (!mesh) {
-      mesh = new THREE.Mesh(result.geometry, this.materials[mode]);
-      mesh.name = 'voxelMesh';
-    }
-    this.scene.add(mesh);
+    this._direct.set(chunk, this.bridge.createDirectMesh(this.materials['gpu-direct'], capacity));
   }
 
-  async remesh(mode, opts) {
-    const result = await this.measure(mode, opts);
+  /** Puts a chunk result into the scene at the chunk's world position. */
+  showChunk(result, mode) {
+    const { chunk } = result;
+    const old = this._shown.get(chunk);
+    let mesh = result.mesh;
+    if (!mesh) {
+      // CPU-built geometry: swap it into this chunk's mesh rather than making a new one.
+      mesh = this._cpuMeshes.get(chunk);
+      if (mesh) {
+        const previous = mesh.geometry;
+        mesh.geometry = result.geometry;
+        mesh.material = this.materials[mode];
+        if (previous !== result.geometry) releaseGeometry(previous);
+      } else {
+        mesh = new THREE.Mesh(result.geometry, this.materials[mode]);
+        mesh.name = 'voxelMesh';
+        this._cpuMeshes.set(chunk, mesh);
+      }
+    }
+    if (old && old !== mesh) {
+      this.scene.remove(old);
+      // A CPU mesh replaced by a direct one: free its geometry until it is needed again.
+      if (this._cpuMeshes.get(chunk) === old) releaseGeometry(old.geometry);
+    }
+    const [ox, oy, oz] = this.world.origin(chunk);
+    mesh.position.set(ox, oy, oz);
+    if (old !== mesh) this.scene.add(mesh);
+    this._shown.set(chunk, mesh);
+    this._shownQuads.set(chunk, result.quadCount);
+  }
+
+  /** Total quads currently shown, or null if some chunk is unmeshed or its count unknown. */
+  shownQuadCount() {
+    let total = 0;
+    for (const chunk of this.world.chunks) {
+      const n = this._shownQuads.get(chunk);
+      if (typeof n !== 'number') return null;
+      total += n;
+    }
+    return total;
+  }
+
+  /** Shows a combined result (every chunk in it). */
+  show(result, mode) {
+    for (const r of result.perChunk) this.showChunk(r, mode);
+  }
+
+  /** Disposes a combined result's CPU geometries without showing them (benchmark runs). */
+  discard(result) {
+    for (const r of result.perChunk) if (r.geometry) releaseGeometry(r.geometry);
+  }
+
+  /**
+   * Meshes every chunk of the world, one after another, without touching the scene.
+   * Clears the dirty flags of everything it meshed.
+   */
+  async measure(mode) {
+    const results = [];
+    for (const chunk of this.world.chunks) {
+      this.world.clearDirty(chunk);
+      results.push(await this.meshChunk(chunk, mode));
+    }
+    return combine(results);
+  }
+
+  /** measure() + show(): a full remesh of the whole world. */
+  async remesh(mode) {
+    const result = await this.measure(mode);
     this.show(result, mode);
     return result;
   }
 
   /**
-   * remesh() for interactive edits: if more edits arrive while a remesh is running,
-   * they are folded into one more pass instead of queuing one remesh per click.
-   * Every caller's promise resolves with the result of the final pass.
+   * Remeshes the chunks marked dirty by edits, one chunk per frame so several dirty
+   * chunks do not land in a single frame. Edits that arrive meanwhile mark more
+   * chunks dirty and are picked up by the same loop, so rapid clicks coalesce.
+   * Every caller's promise resolves with the combined result of everything this
+   * loop remeshed, with `wallMs` from start to finish (including the frames between
+   * chunks).
    */
-  remeshCoalesced(mode, opts) {
-    this._wantRemesh = true;
-    if (!this._inflight) {
-      this._inflight = (async () => {
-        let result;
-        try {
-          while (this._wantRemesh) {
-            this._wantRemesh = false;
-            result = await this.remesh(mode, opts);
-          }
-        } finally {
-          this._inflight = null;
-        }
-        return result;
-      })();
-    }
-    return this._inflight;
+  remeshDirty(mode) {
+    if (this._inflight) return this._inflight;
+    const run = (async () => {
+      const t0 = performance.now();
+      const results = [];
+      let chunk;
+      while ((chunk = this.world.dirtyChunks[0])) {
+        if (results.length > 0) await nextFrame();
+        this.world.clearDirty(chunk); // before meshing, so edits during it re-mark it
+        const r = await this.meshChunk(chunk, mode);
+        this.showChunk(r, mode);
+        results.push(withoutMesh(r));
+      }
+      return { ...combine(results), wallMs: performance.now() - t0 };
+    })();
+    // Cleared by identity once settled. (With nothing dirty the body finishes before
+    // `run` is assigned, so clearing from inside it would leave a stale promise.)
+    this._inflight = run;
+    const clear = () => {
+      if (this._inflight === run) this._inflight = null;
+    };
+    run.then(clear, clear);
+    return run;
+  }
+
+  _releaseWorld() {
+    for (const mesh of this._shown.values()) this.scene.remove(mesh);
+    for (const mesh of this._cpuMeshes.values()) releaseGeometry(mesh.geometry);
+    this._cpuMeshes.clear();
+    this._shown.clear();
+    this._shownQuads.clear();
+    for (const d of this._direct.values()) d.dispose();
+    this._direct.clear();
+    for (const chunk of this._gpuChunks) this.mesher?.releaseChunk(chunk);
+    this._gpuChunks.clear();
   }
 
   dispose() {
-    this._direct?.dispose();
-    this._direct = null;
+    this._releaseWorld();
+    if (this._readbackTarget) this.mesher?.destroyTarget(this._readbackTarget);
     this._readbackTarget = null;
     for (const m of Object.values(this.materials)) m.dispose();
   }

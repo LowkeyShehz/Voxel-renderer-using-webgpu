@@ -1,0 +1,141 @@
+{
+  "meta": {
+    "date": "2026-10-06T18:04:57.411Z",
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+    "gpu": {
+      "vendor": "amd",
+      "architecture": "rdna-1",
+      "device": "0x731f",
+      "description": "AMD Radeon RX 5600 XT (RADV NAVI10)",
+      "timestampQuery": true
+    },
+    "chunkSize": 96,
+    "edits": 40,
+    "intervalMs": 250,
+    "seed": 1337,
+    "radius": 24,
+    "display": {
+      "devicePixelRatio": 1,
+      "viewport": [
+        1920,
+        999
+      ]
+    }
+  },
+  "idle": {
+    "frames": 120,
+    "totalMs": 1999.9749999999913,
+    "avg": 16.66645833333326,
+    "median": 16.66500000000815,
+    "p95": 16.670000000012806,
+    "p99": 16.670000000012806,
+    "max": 16.69000000000233,
+    "hitches": 0,
+    "over33": 0,
+    "wallMs": 2000.175000000745,
+    "coverage": 0.9999000087488576
+  },
+  "results": [
+    {
+      "mode": "cpu",
+      "edits": 40,
+      "intervalMs": 250,
+      "radius": 24,
+      "seed": 1337,
+      "voxelsRemoved": 344515,
+      "frames": {
+        "frames": 456,
+        "totalMs": 10583.184999999998,
+        "avg": 23.208739035087714,
+        "median": 16.66500000000815,
+        "p95": 83.33000000000175,
+        "p99": 100,
+        "max": 150,
+        "hitches": 40,
+        "over33": 40,
+        "wallMs": 10586.525000000373,
+        "coverage": 0.9996845045942484
+      },
+      "editMs": {
+        "median": 89.74000000022352,
+        "mean": 94.0167499999283,
+        "p95": 111.21349999997754,
+        "max": 153.64499999955297
+      },
+      "gpuMs": null,
+      "passMs": null,
+      "bytesUpPerEdit": 4221021,
+      "bytesDownPerEdit": 0
+    },
+    {
+      "mode": "gpu-readback",
+      "edits": 40,
+      "intervalMs": 250,
+      "radius": 24,
+      "seed": 1337,
+      "voxelsRemoved": 344515,
+      "frames": {
+        "frames": 632,
+        "totalMs": 10533.180000000008,
+        "avg": 16.666424050632923,
+        "median": 16.66500000000815,
+        "p95": 16.669999999998254,
+        "p99": 16.670000000012806,
+        "max": 16.670000000012806,
+        "hitches": 0,
+        "over33": 0,
+        "wallMs": 10520.180000000633,
+        "coverage": 1.001235720301304
+      },
+      "editMs": {
+        "median": 22.427500000223517,
+        "mean": 22.200000000023284,
+        "p95": 23.732500000391155,
+        "max": 23.87000000011176
+      },
+      "gpuMs": 13.858880000000001,
+      "passMs": [
+        0.04464,
+        13.81166,
+        0.00312
+      ],
+      "bytesUpPerEdit": 3412487.1,
+      "bytesDownPerEdit": 3376816.8
+    },
+    {
+      "mode": "gpu-direct",
+      "edits": 40,
+      "intervalMs": 250,
+      "radius": 24,
+      "seed": 1337,
+      "voxelsRemoved": 344515,
+      "frames": {
+        "frames": 631,
+        "totalMs": 10516.520000000004,
+        "avg": 16.66643423137877,
+        "median": 16.66500000000815,
+        "p95": 16.669999999998254,
+        "p99": 16.670000000012806,
+        "max": 16.67500000000291,
+        "hitches": 0,
+        "over33": 0,
+        "wallMs": 10514.59500000067,
+        "coverage": 1.0001830788536632
+      },
+      "editMs": {
+        "median": 14.674999999813735,
+        "mean": 14.328000000026076,
+        "p95": 15.763499999791383,
+        "max": 16.53000000026077
+      },
+      "gpuMs": 13.90118,
+      "passMs": [
+        0.04442,
+        13.85368,
+        0.00292
+      ],
+      "bytesUpPerEdit": 35670.3,
+      "bytesDownPerEdit": 0
+    }
+  ]
+}

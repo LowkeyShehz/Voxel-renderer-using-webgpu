@@ -54,27 +54,48 @@ When implementing any task, always:
 
 ## 2. Current Prototype State — Verified Against Actual Code
 
-The repo's README overstates what's implemented. Here is what `VoxelEnginePrototype.jsx` (594 lines, main and only substantial file) actually does, confirmed by reading the source directly:
+*Updated for branch `phase5-multichunk` (Phase 5, stages 1–3). The original Phase 0
+assessment this section used to hold (per-face meshing only, readback into WebGL, one
+hard-coded chunk) is in git history; all of its gaps are now closed. README.md and
+DATA_FORMAT.md describe the same state in more detail.*
 
-**What exists and works:**
-- A single 96×96×96 voxel chunk (`CHUNK_SIZE = 96`), generated once from a sine-noise function — not the "32³" the README text mentions in places.
-- Two meshing code paths, switchable via radio button:
-  - **CPU path** (`cpuMeshGeneration`): triple-nested loop, checks 6 neighbors per solid voxel, emits one quad per exposed face. Naive face culling only — **no face merging of any kind.**
-  - **GPU path** (`gpuMeshGeneration`): uploads voxel data as a storage buffer, dispatches a WGSL compute shader (`@workgroup_size(4,4,4)`) that does the same per-voxel, per-face exposure check in parallel, using `atomicAdd` on a counter buffer to reserve output slots — this correctly avoids race conditions on the shared vertex buffer.
-- A CPU-vs-GPU timer comparison UI (`stats.time`, `stats.faces`) — this is a genuinely useful head start on Objective 5 (benchmarking).
-- Device/pipeline caching across runs (`cachedDevice`, `cachedPipeline`) to avoid re-init overhead — good practice, keep it.
+**Implemented:**
+- **Data:** `ChunkData` (96³, 1 bit per voxel, 108 KB, dirty word range) and
+  `ChunkManager` (N×N grid at y = 0, N = 1..6, world get/set/carveSphere, remesh-dirty
+  tracking that also marks the neighbour when a border voxel changes).
+- **Greedy meshing, CPU and GPU, identical output.** CPU: `cpuGreedyMesh.js`. GPU: WGSL
+  `mask_main` (per voxel), `merge_bitrun_main` (bit-run merge, default) or `merge_main`
+  (legacy, `?mergeImpl=legacy`), `finalize_main`. Both meshers are neighbour-aware: faces
+  between two solid chunks are not emitted (GPU reads 6 neighbour border planes).
+  Equivalence is unit-tested in Node against a JS reference (`bitGreedyMerge.js`) and
+  checked on the GPU by the in-app **Run correctness check** (1 chunk + a 2×2 world).
+- **Zero-copy rendering (Phase 3):** one shared `GPUDevice`; compute writes into
+  Three-owned `StorageBufferAttribute`/`IndirectStorageBufferAttribute` buffers drawn with
+  `drawIndirect` (`DirectRenderBridge`). The readback mode is kept as a comparison.
+  Output buffers are sized per chunk (6 MB default, grown on overflow), Three's CPU copy
+  of them is released, and chunks are frustum-culled with known bounds.
+- **Dynamic edits (Phase 4):** block remove/place and explosions via a DDA raycast over
+  occupancy data; only touched chunks are remeshed, one per frame, dirty-range uploads only.
+- **Multi-chunk world and navigation (Phase 5):** world-size selector, orbit and
+  free-fly cameras.
+- **Benchmarks:** Benchmark ×20 (full mesh), seeded edit benchmark (frame times, edit ms,
+  latency, bytes up/down, per-pass GPU timestamps), sweep over world sizes × modes × 3
+  runs with medians and spread, JSON export, `scripts/benchmarks-to-md.mjs` (markdown + CSV).
 
-**What the README claims but the code does NOT do (do not assume these are done):**
-- ❌ **"GPU generates AND renders mesh (no CPU roundtrip)"** — false as written. After the compute pass, the code does `counterReadBuffer.mapAsync()` and `stagingBuffer.mapAsync()` to **copy the entire vertex buffer back to the CPU**, unpacks it into typed arrays, builds a `THREE.BufferGeometry`, and renders it with a standard `THREE.WebGLRenderer`. There is no WebGPU-native render path at all — WebGPU is used purely as a compute co-processor, then the result is round-tripped back through the CPU into WebGL. **Step 3 of the target architecture ("Direct Render") is not implemented.**
-- ❌ **Greedy meshing / quad merging** — not implemented on either the CPU or GPU path. Both simply emit one quad per exposed voxel face (`emitFace` in WGSL, the `faces` loop in JS). This is the single feature most directly named in your objectives ("mask generation and quad merging") and it does not exist yet, anywhere in the codebase.
-- ❌ **Dynamic terrain modification** — the prototype is a one-shot "click to generate" demo. There is no block add/remove, no partial/incremental chunk regeneration, no notion of "an explosion happened, remesh only the affected region."
-- ❌ **Chunking / multi-chunk world** — only a single hardcoded chunk exists. No chunk manager, no streaming, no frustum culling, no LOD.
+**Not implemented (out of scope / future work per the PPT):** streaming or infinite
+worlds, more than one chunk layer in y, LOD, block types/materials, physics or a player
+controller.
 
-**Bottom line:** the prototype currently proves "raw per-face GPU generation is faster than CPU per-face generation," which is a fine proof-of-concept starting point, but the actual required deliverables — GPU-side greedy meshing, a true zero-copy render path, and dynamic update handling — are still ahead, not partially built.
+**Measured so far (RX 5600 XT, see BENCHMARKS.md):** Phase 3 full-chunk meshing CPU
+101.9 ms vs GPU direct 7.8 ms; Phase 4 edit benchmark: CPU hitched on 40/40 edits, both
+GPU modes held 60 Hz. Phase 5 merge A/B and sweep results are still to be measured on
+that machine (see TESTING.md).
 
 ---
 
 ## 3. Corrected Priority Order
+
+*(Historical: the order used for Phases 2–5, all now implemented.)*
 
 Unlike a generic roadmap, this ordering reflects what's *actually* missing, weighted by (a) how central it is to your stated objectives and (b) technical dependency order:
 
