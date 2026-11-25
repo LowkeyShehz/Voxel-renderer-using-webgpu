@@ -37,8 +37,8 @@ function metaBlock(meta = {}) {
     `- Browser: ${meta.userAgent ?? 'unknown'}`,
     `- CPU threads: ${meta.hardwareConcurrency ?? 'unknown'} · display: ${meta.display ? `${meta.display.viewport?.join('×')} @ ${meta.display.devicePixelRatio}x` : 'unknown'}`,
     `- Merge pass: ${meta.mergeImpl ?? 'n/a'}${meta.mergeImpl === 'bitrun' ? ` (workgroup ${meta.mergeWorkgroupSize})` : ''}`,
-    `- Edits: ${meta.edits} explosions r=${meta.radius} every ${meta.intervalMs} ms, seed ${meta.seed}${meta.repeats ? ` · ${meta.repeats} runs per configuration` : ''}`,
-  ].join('\n');
+    meta.edits != null && `- Edits: ${meta.edits} explosions r=${meta.radius} every ${meta.intervalMs} ms, seed ${meta.seed}${meta.repeats ? ` · ${meta.repeats} runs per configuration` : ''}`,
+  ].filter(Boolean).join('\n');
 }
 
 function sweepToMarkdown(json, name) {

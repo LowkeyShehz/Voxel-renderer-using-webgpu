@@ -460,6 +460,7 @@ export default function VoxelEnginePrototype() {
         date: new Date().toISOString(),
         userAgent: navigator.userAgent,
         gpu: getGpuInfo(),
+        hardwareConcurrency: navigator.hardwareConcurrency ?? null,
         chunkSize: CHUNK_SIZE,
         display: { devicePixelRatio: window.devicePixelRatio, viewport: [window.innerWidth, window.innerHeight] },
       };
