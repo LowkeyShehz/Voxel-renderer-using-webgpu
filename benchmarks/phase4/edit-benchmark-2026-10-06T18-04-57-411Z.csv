@@ -1,0 +1,4 @@
+"mode","gridSize","frameAvg","frameP95","frameP99","frameMax","hitches","over33","coverage","editMsMedian","editMsMax","bytesUpPerEdit","bytesDownPerEdit","gpuMs","passMask","passMerge","passFinalize"
+"cpu",1,23.2087,83.33,100,150,40,40,0.9997,89.74,153.645,4221021,0,,,,
+"gpu-readback",1,16.6664,16.67,16.67,16.67,0,0,1.0012,22.4275,23.87,3412487.1,3376816.8,13.8589,,,
+"gpu-direct",1,16.6664,16.67,16.67,16.675,0,0,1.0002,14.675,16.53,35670.3,0,13.9012,,,

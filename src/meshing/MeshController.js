@@ -21,8 +21,19 @@ export const MODES = {
 const VOXEL_BUFFER_BYTES = (CHUNK_SIZE ** 3) / 8;
 const COUNTER_BYTES = 32;
 
-/** Resolves on the next animation frame, so queued work lets a frame render in between. */
-const nextFrame = () => new Promise((resolve) => requestAnimationFrame(() => resolve()));
+/**
+ * Resolves on the next animation frame, so queued work lets a frame render in between.
+ * Falls back to a timeout: requestAnimationFrame never fires in a hidden tab, which
+ * would otherwise leave a queued remesh (and any benchmark awaiting it) hanging.
+ */
+const nextFrame = (timeoutMs = 100) =>
+  new Promise((resolve) => {
+    const timer = setTimeout(resolve, timeoutMs);
+    requestAnimationFrame(() => {
+      clearTimeout(timer);
+      resolve();
+    });
+  });
 
 export function createWorld(gridSize = 1) {
   return new ChunkManager({ gridSize, generator: new TerrainGenerator() });

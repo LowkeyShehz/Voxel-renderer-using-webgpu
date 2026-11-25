@@ -14,8 +14,9 @@ import { FrameRecorder } from './src/benchmark/FrameRecorder';
 import { runEditBenchmark, measureIdleFrames } from './src/benchmark/editBenchmark';
 import { runSweep, estimateSweepSeconds, SWEEP_REPEATS } from './src/benchmark/sweepBenchmark';
 import { summarizeSweep } from './src/benchmark/sweepSummary.js';
+import { runMergeAb, MERGE_AB_ROUNDS } from './src/benchmark/mergeAbBenchmark.js';
 import { median, medianPassMs } from './src/benchmark/stats';
-import { MeshStats, EditInfo, BenchmarkResults, CorrectnessResult, WorldInfo, SweepResults, fmt } from './src/ui/panels';
+import { MeshStats, EditInfo, BenchmarkResults, CorrectnessResult, MergeAbResult, WorldInfo, SweepResults, fmt } from './src/ui/panels';
 
 /**
  * VOXEL ENGINE PROTOTYPE - WebGPU Compute Shader Meshing
@@ -43,7 +44,16 @@ const button = (color, busy, outline = false) => ({
 });
 const section = { marginTop: '14px', paddingTop: '12px', borderTop: '1px solid #333' };
 
-const nextFrame = () => new Promise((resolve) => requestAnimationFrame(() => resolve()));
+// Falls back to a timeout: requestAnimationFrame never fires in a hidden tab, which
+// would otherwise leave the UI stuck in its busy state.
+const nextFrame = (timeoutMs = 100) =>
+  new Promise((resolve) => {
+    const timer = setTimeout(resolve, timeoutMs);
+    requestAnimationFrame(() => {
+      clearTimeout(timer);
+      resolve();
+    });
+  });
 
 // === REACT COMPONENT ===
 export default function VoxelEnginePrototype() {
@@ -66,6 +76,7 @@ export default function VoxelEnginePrototype() {
   const [frameInfo, setFrameInfo] = useState(null);
   const [recorder] = useState(() => new FrameRecorder());
   const [check, setCheck] = useState(null); // correctness check report
+  const [mergeAb, setMergeAb] = useState({ running: false, progress: null, report: null }); // legacy vs bit-run merge timing
   const [sweepMax, setSweepMax] = useState(4); // sweep grids 1x1 .. sweepMax x sweepMax
   const [sweep, setSweep] = useState({ running: false, progress: null, idle: null, runs: [], summary: [], meta: null });
 
@@ -85,7 +96,7 @@ export default function VoxelEnginePrototype() {
   });
 
   const modeColor = `#${MODES[mode].color.toString(16).padStart(6, '0')}`;
-  const locked = busy || bench.running || sweep.running;
+  const locked = busy || bench.running || sweep.running || mergeAb.running;
 
   /** Refreshes the world summary (chunks, quads, GPU memory). */
   const updateWorldInfo = useCallback(() => {
@@ -433,6 +444,39 @@ export default function VoxelEnginePrototype() {
     }
   };
 
+  // ---- legacy vs bit-run merge, timed alternately (paper Table VII) --------
+  const runMergeAbBenchmark = async () => {
+    const mesher = ctx.current.mesher;
+    if (!mesher) return;
+    setError(null);
+    setMergeAb({ running: true, progress: 'starting…', report: null });
+    let report = null;
+    try {
+      report = await runMergeAb(mesher, { onProgress: (progress) => setMergeAb((s) => ({ ...s, progress })) });
+      report.meta = {
+        date: new Date().toISOString(),
+        userAgent: navigator.userAgent,
+        gpu: getGpuInfo(),
+        chunkSize: CHUNK_SIZE,
+        display: { devicePixelRatio: window.devicePixelRatio, viewport: [window.innerWidth, window.innerHeight] },
+      };
+    } catch (err) {
+      console.error(err);
+      setError(err.message);
+    } finally {
+      setMergeAb({ running: false, progress: null, report });
+    }
+  };
+
+  const exportMergeAb = () => {
+    const url = URL.createObjectURL(new Blob([JSON.stringify(mergeAb.report, null, 2)], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `merge-ab-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // ---- scripted edit benchmark (frame-time stability) ---------------------
   const runBenchmark = async () => {
     const ctrl = ctx.current.controller;
@@ -620,6 +664,19 @@ export default function VoxelEnginePrototype() {
           </div>
         )}
         <CorrectnessResult report={check} />
+        {available['gpu-readback'] && (
+          <div style={{ marginTop: '8px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <button onClick={runMergeAbBenchmark} disabled={locked || !gpu.timestamps} style={button('#8e44ad', locked, true)}
+              title={gpu.timestamps ? '' : 'needs timestamp-query'}>
+              {mergeAb.running ? 'Running…' : `Merge A/B ×${MERGE_AB_ROUNDS}`}
+            </button>
+            <button onClick={exportMergeAb} disabled={!mergeAb.report} style={button('#8e44ad', false, true)}>
+              Export A/B JSON
+            </button>
+          </div>
+        )}
+        {mergeAb.progress && <div style={{ marginTop: '6px', fontSize: '12px', color: '#f39c12' }}>⏳ {mergeAb.progress}</div>}
+        <MergeAbResult report={mergeAb.report} />
 
         {error && <div style={{ color: '#ff6b6b', marginTop: '10px' }}>❌ {error}</div>}
         <WorldInfo info={worldInfo} />

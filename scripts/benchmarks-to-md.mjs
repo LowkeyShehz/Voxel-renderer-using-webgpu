@@ -5,10 +5,11 @@
  *   node scripts/benchmarks-to-md.mjs benchmarks/sweep-*.json
  *   node scripts/benchmarks-to-md.mjs --csv-dir out/ benchmarks/*.json > tables.md
  *
- * Understands both export kinds:
+ * Understands three export kinds:
  *   - sweep JSON ("Export sweep JSON"): per (grid, mode) median and [min-max] over
  *     the repeats; CSV has one row per (grid, mode) with median/min/max columns.
  *   - edit-benchmark JSON ("Export JSON"): one row per mode, as in the app's table.
+ *   - merge A/B JSON ("Export A/B JSON"): legacy vs bit-run pass times and speed-up.
  * The CSV is written next to each input (same name, .csv) unless --csv-dir is given.
  * No dependencies; reads the summary logic from src/benchmark/sweepSummary.js so the
  * numbers match the app.
@@ -103,6 +104,25 @@ function editBenchToMarkdown(json, name) {
   return { markdown: md, csv: [csvHeader, ...csvRows].map((r) => r.map(csvCell).join(',')).join('\n') + '\n' };
 }
 
+function mergeAbToMarkdown(json, name) {
+  const { impls, speedup, pairedSpeedup, rounds } = json.summary;
+  const q = (s) => `${num(s.median, 3)} [${num(s.p25, 3)}–${num(s.p75, 3)}]`;
+  const rows = ['legacy', 'bitrun'].map((impl) => [impl, q(impls[impl].mask), q(impls[impl].merge), q(impls[impl].finalize), q(impls[impl].total)]);
+  const md = [
+    `## Merge A/B: ${name}`, '', metaBlock({ ...json.meta, mergeImpl: 'legacy vs bitrun', mergeWorkgroupSize: json.mergeWorkgroupSize }),
+    `- ${rounds} alternating rounds after ${json.warmup} warm-up, ${json.quadCounts?.bitrun?.toLocaleString?.() ?? '?'} quads per mesh`, '',
+    'GPU ms per pass, median [p25–p75].', '',
+    table(['merge pass', 'mask', 'merge', 'finalize', 'total'], rows),
+    '', `Speed-up of the merge pass: **${num(speedup)}×** (median of per-round ratios ${num(pairedSpeedup)}×).`, '',
+  ].join('\n');
+  const header = ['impl', ...['mask', 'merge', 'finalize', 'total'].flatMap((p) => [`${p}_median`, `${p}_p25`, `${p}_p75`, `${p}_min`, `${p}_max`])];
+  const csvRows = ['legacy', 'bitrun'].map((impl) => [impl, ...['mask', 'merge', 'finalize', 'total'].flatMap((p) => {
+    const s = impls[impl][p];
+    return [s.median, s.p25, s.p75, s.min, s.max];
+  })]);
+  return { markdown: md, csv: [header, ...csvRows].map((r) => r.map(csvCell).join(',')).join('\n') + '\n' };
+}
+
 const args = process.argv.slice(2);
 let csvDir = null;
 const files = [];
@@ -120,7 +140,8 @@ for (const file of files) {
   const json = JSON.parse(readFileSync(file, 'utf8'));
   const name = basename(file);
   const isSweep = json.kind === 'sweep' || Array.isArray(json.runs);
-  const { markdown, csv } = isSweep ? sweepToMarkdown(json, name) : editBenchToMarkdown(json, name);
+  const convert = json.kind === 'merge-ab' ? mergeAbToMarkdown : isSweep ? sweepToMarkdown : editBenchToMarkdown;
+  const { markdown, csv } = convert(json, name);
   process.stdout.write(markdown + '\n');
   const csvPath = join(csvDir ?? dirname(file), name.replace(/\.json$/i, '') + '.csv');
   writeFileSync(csvPath, csv);

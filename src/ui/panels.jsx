@@ -72,6 +72,27 @@ export function CorrectnessResult({ report }) {
   );
 }
 
+/** Legacy vs bit-run merge pass, timed alternately in one session. */
+export function MergeAbResult({ report }) {
+  if (!report) return null;
+  const { impls, speedup, pairedSpeedup, rounds } = report.summary;
+  const row = (impl) => (
+    <div key={impl}>
+      &nbsp;&nbsp;{impl}: merge <strong>{fmt(impls[impl].merge.median, 3)}</strong> ms
+      [{fmt(impls[impl].merge.p25, 3)}–{fmt(impls[impl].merge.p75, 3)}] · mask {fmt(impls[impl].mask.median, 3)} ms
+    </div>
+  );
+  return (
+    <div style={{ marginTop: '8px', fontSize: '12px' }}>
+      <div>Merge A/B, medians of {rounds} alternating rounds ({report.quadCounts.bitrun.toLocaleString()} quads each):</div>
+      {row('legacy')}
+      {row('bitrun')}
+      <div>&nbsp;&nbsp;speed-up <strong>{fmt(speedup)}×</strong> (paired per round {fmt(pairedSpeedup)}×)</div>
+      <div style={muted}>[p25–p75] in brackets. Export the JSON for the paper.</div>
+    </div>
+  );
+}
+
 /** World size, total shown quads and GPU memory held for meshing. */
 export function WorldInfo({ info }) {
   if (!info) return null;
