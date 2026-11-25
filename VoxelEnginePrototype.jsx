@@ -5,7 +5,7 @@ import { CHUNK_SIZE } from './src/voxel/ChunkData';
 import { MAX_GRID_SIZE } from './src/voxel/ChunkManager.js';
 import { GpuMesher, mergeOptionsFromUrl } from './src/meshing/gpuMeshPipeline';
 import { runCorrectnessCheck } from './src/meshing/correctnessCheck';
-import { MeshController, MODES, createWorld } from './src/meshing/MeshController';
+import { MeshController, MODES, createWorld, withoutMesh } from './src/meshing/MeshController';
 import { DirectRenderBridge } from './src/render/DirectRenderBridge';
 import { FreeFlyControls } from './src/render/FreeFlyControls';
 import { getGpuDevice, getGpuInfo } from './src/gpu/gpuContext';
@@ -326,6 +326,8 @@ export default function VoxelEnginePrototype() {
       console.error(err);
       setError(err.message);
     } finally {
+      setGridSize(ctx.current.controller?.world.gridSize ?? size);
+      updateWorldInfo();
       setBusy(false);
     }
   };
@@ -397,7 +399,8 @@ export default function VoxelEnginePrototype() {
       for (let i = 0; i < total; i++) {
         if (last) ctrl.discard(last); // only the final run's geometry is shown
         last = await ctrl.measure(mode);
-        if (i >= total - runs) samples.push(last);
+        // Keep only the numbers: holding every run's geometry exhausts memory on big worlds.
+        if (i >= total - runs) samples.push({ ...last, perChunk: last.perChunk.map(withoutMesh) });
       }
       ctrl.show(last, mode);
 
@@ -563,10 +566,12 @@ export default function VoxelEnginePrototype() {
       try {
         ctrl.resetTerrain();
         await ctrl.remesh(mode);
-        updateWorldInfo();
       } catch (err) {
         console.error(err);
+        setError(err.message);
       }
+      setGridSize(ctrl.world.gridSize);
+      updateWorldInfo();
       setSweep((s) => ({ ...s, ...(result ?? {}), running: false, progress: null }));
     }
   };

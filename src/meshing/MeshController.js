@@ -19,6 +19,13 @@ export const MODES = {
 };
 
 const VOXEL_BUFFER_BYTES = (CHUNK_SIZE ** 3) / 8;
+
+/**
+ * A per-chunk result without its geometry/mesh, for results kept after the mesh is
+ * shown. Benchmarks hold many results at once; keeping the geometries alive with them
+ * retains megabytes of vertex arrays per chunk and runs the tab out of memory.
+ */
+export const withoutMesh = ({ geometry, mesh, ...rest }) => rest;
 const COUNTER_BYTES = 32;
 
 /**
@@ -346,7 +353,7 @@ export class MeshController {
         this.world.clearDirty(chunk); // before meshing, so edits during it re-mark it
         const r = await this.meshChunk(chunk, mode);
         this.showChunk(r, mode);
-        results.push(r);
+        results.push(withoutMesh(r));
       }
       return { ...combine(results), wallMs: performance.now() - t0 };
     })();
